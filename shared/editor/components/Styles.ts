@@ -1292,6 +1292,181 @@ ul.checkbox_list {
   }
 }
 
+/* Todo List Styles */
+ul.todo_list {
+  padding: 0;
+  margin-left: -24px;
+  margin-right: 0;
+  
+  > li {
+    border-radius: 4px;
+    transition: background-color 100ms ease-in-out;
+    
+    &.todo-item {
+      margin: 8px 0;
+      padding: 12px;
+      border: 1px solid ${props.theme.divider};
+      background: ${props.theme.background};
+      
+      &:hover {
+        background: ${props.theme.backgroundSecondary};
+      }
+      
+      &.checked {
+        opacity: 0.6;
+        
+        .todo-title {
+          text-decoration: line-through;
+          color: ${props.theme.textTertiary};
+        }
+      }
+    }
+    
+    &::before {
+      left: 0;
+    }
+  }
+  
+  .todo-checkbox {
+    display: inline-block;
+    cursor: var(--pointer);
+    pointer-events: ${
+      props.readOnly && !props.readOnlyWriteCheckboxes ? "none" : "initial"
+    };
+    width: 18px;
+    height: 18px;
+    position: relative;
+    top: 1px;
+    transition: transform 100ms ease-in-out;
+    margin: 0 12px 0 0;
+    flex-shrink: 0;
+
+    background-image: ${`url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 18 18' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M4 0C1.79086 0 0 1.79086 0 4V14C0 16.2091 1.79086 18 4 18H14C16.2091 18 18 16.2091 18 14V4C18 1.79086 16.2091 0 14 0H4ZM4 2C2.89543 2 2 2.89543 2 4V14C2 15.1046 2.89543 16 4 16H14C15.1046 16 16 15.1046 16 14V4C16 2.89543 15.1046 2 14 2H4Z' fill='${props.theme.text.replace(
+      "#",
+      "%23"
+    )}' /%3E%3C/svg%3E%0A");`}
+
+    &[aria-checked=true] {
+      background-image: ${`url(
+        "data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 18 18' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M4 0C1.79086 0 0 1.79086 0 4V14C0 16.2091 1.79086 18 4 18H14C16.2091 18 18 16.2091 18 14V4C18 1.79086 16.2091 0 14 0H4ZM5.54688 7.39844L7.625 10.0156L12.25 4C12.6562 3.48438 13.4062 3.375 13.9219 3.78125C14.4375 4.1875 14.5469 4.9375 14.1406 5.45312L8.64062 12.4531C8.17188 13.0469 7.25 13.0781 6.73438 12.5156L4.23438 9.51562C3.79688 8.98438 3.86719 8.20312 4.39844 7.76562C4.92969 7.32812 5.71094 7.39844 6.14844 7.92969L5.54688 7.39844Z' fill='${props.theme.accent.replace(
+          "#",
+          "%23"
+        )}' /%3E%3C/svg%3E%0A"
+      )`};
+    }
+
+    &:active {
+      transform: scale(0.9);
+    }
+  }
+  
+  .todo-item-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .todo-header {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .todo-title {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: ${props.theme.text};
+    font-family: inherit;
+    padding: 2px 0;
+    
+    &::placeholder {
+      color: ${props.theme.placeholder};
+    }
+    
+    &:focus {
+      background: ${props.theme.backgroundSecondary};
+      border-radius: 4px;
+      padding: 4px 8px;
+    }
+  }
+  
+  .todo-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 12px;
+  }
+  
+  .todo-description-preview {
+    color: ${props.theme.textSecondary};
+    background: ${props.theme.backgroundTertiary};
+    padding: 2px 6px;
+    border-radius: 3px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .todo-due-date {
+    color: ${props.theme.textSecondary};
+    background: ${props.theme.backgroundTertiary};
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  
+  .todo-priority {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 10px;
+    
+    &.priority-high {
+      background: ${props.theme.danger};
+      color: white;
+    }
+    
+    &.priority-medium {
+      background: ${props.theme.warning};
+      color: white;
+    }
+    
+    &.priority-low {
+      background: ${props.theme.accent};
+      color: white;
+    }
+  }
+  
+  .todo-item-content {
+    margin-left: 30px;
+    
+    > p:first-child {
+      margin-top: 0;
+    }
+    
+    > p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &:has(p:dir(rtl)) {
+    .todo-checkbox {
+      margin: 0 0 0 12px;
+    }
+    
+    .todo-item-content {
+      margin-right: 30px;
+      margin-left: 0;
+    }
+  }
+}
+
 li p:first-child {
   margin: 0;
   word-break: break-word;

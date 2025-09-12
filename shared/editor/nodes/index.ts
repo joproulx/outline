@@ -41,6 +41,8 @@ import TableCell from "./TableCell";
 import TableHeader from "./TableHeader";
 import TableRow from "./TableRow";
 import Text from "./Text";
+import TodoItem from "./TodoItem";
+import TodoList from "./TodoList";
 import Video from "./Video";
 
 type Nodes = (typeof Node | typeof Mark | typeof Extension)[];
@@ -85,6 +87,8 @@ export const tableExtensions: Nodes = [
   Table,
 ];
 
+export const todoExtensions: Nodes = [TodoList, TodoItem];
+
 /**
  * The full set of nodes that are used in the editor. This is used for rich
  * editors that need advanced formatting.
@@ -110,6 +114,7 @@ export const richExtensions: Nodes = [
   // the container nodes first.
   ...listExtensions,
   ...tableExtensions,
+  ...todoExtensions,
 ];
 
 /**

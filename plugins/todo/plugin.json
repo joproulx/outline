@@ -1,0 +1,6 @@
+{
+  "id": "todo",
+  "name": "Todo Documents",
+  "priority": 15,
+  "description": "Adds enhanced todo document functionality with titles, descriptions, due dates, and completion tracking."
+}
