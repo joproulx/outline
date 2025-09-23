@@ -65,6 +65,9 @@ class SimpleTodoItem extends ParanoidModel<
   @Column(DataType.DATE)
   completedAt?: Date;
 
+  @Column(DataType.JSON)
+  tags?: string[];
+
   // Associations
   @BelongsTo(() => Document, "documentId")
   document?: Document;

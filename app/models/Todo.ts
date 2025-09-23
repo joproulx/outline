@@ -70,7 +70,11 @@ class Todo extends Model {
     }
 
     this.completed = true;
-    await this.save();
+    // Update through the store to make proper API call
+    const store = this.store as any;
+    if (store.update) {
+      await store.update(this, { completed: true });
+    }
   }
 
   /**
@@ -83,7 +87,11 @@ class Todo extends Model {
     }
 
     this.completed = false;
-    await this.save();
+    // Update through the store to make proper API call
+    const store = this.store as any;
+    if (store.update) {
+      await store.update(this, { completed: false });
+    }
   }
 
   /**
@@ -103,7 +111,23 @@ class Todo extends Model {
     if (!this.dueDate || this.completed) {
       return false;
     }
-    return new Date(this.dueDate) < new Date();
+
+    // Parse the date as UTC and extract just the date part to avoid timezone issues
+    const due = new Date(this.dueDate);
+    const dueUTC = new Date(
+      due.getUTCFullYear(),
+      due.getUTCMonth(),
+      due.getUTCDate()
+    );
+
+    const today = new Date();
+    const todayUTC = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    return dueUTC < todayUTC;
   }
 
   /**
@@ -114,13 +138,23 @@ class Todo extends Model {
     if (!this.dueDate) {
       return false;
     }
-    const today = new Date();
+
+    // Parse the date as UTC and extract just the date part to avoid timezone issues
     const due = new Date(this.dueDate);
-    return (
-      today.getFullYear() === due.getFullYear() &&
-      today.getMonth() === due.getMonth() &&
-      today.getDate() === due.getDate()
+    const dueUTC = new Date(
+      due.getUTCFullYear(),
+      due.getUTCMonth(),
+      due.getUTCDate()
     );
+
+    const today = new Date();
+    const todayUTC = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    return dueUTC.getTime() === todayUTC.getTime();
   }
 
   /**
@@ -149,10 +183,23 @@ class Todo extends Model {
       return null;
     }
 
+    // Parse the date as UTC and extract just the date part to avoid timezone issues
     const due = new Date(this.dueDate);
+    const dueUTC = new Date(
+      due.getUTCFullYear(),
+      due.getUTCMonth(),
+      due.getUTCDate()
+    );
+
     const today = new Date();
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const todayUTC = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    const diffTime = dueUTC.getTime() - todayUTC.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
       return "Today";
@@ -170,7 +217,7 @@ class Todo extends Model {
       return `In ${diffDays} days`;
     }
 
-    return due.toLocaleDateString();
+    return dueUTC.toLocaleDateString();
   }
 }
 

@@ -85,7 +85,7 @@ export default class TodosStore extends Store<Todo> {
     this.isFetching = true;
 
     try {
-      const res = await client.post("/api/todos", params);
+      const res = await client.post("/todos.list", params);
       const todos = res.data?.data || [];
 
       runInAction(() => {
@@ -133,16 +133,15 @@ export default class TodosStore extends Store<Todo> {
     dueDate?: string;
     tags?: string[];
   }): Promise<Todo> {
-    const todo = await super.create({
-      title: params.title,
-      description: params.description || null,
-      priority: params.priority || "none",
-      dueDate: params.dueDate || null,
-      tags: params.tags || [],
-      completed: false,
-    });
+    const res = await client.post("/todos.create", params);
+    const todoData = res.data?.data;
 
-    return todo;
+    if (todoData) {
+      const todo = this.add(todoData);
+      return todo;
+    }
+
+    throw new Error("Failed to create todo");
   }
 
   /**
@@ -160,9 +159,18 @@ export default class TodosStore extends Store<Todo> {
       completed: boolean;
     }>
   ): Promise<Todo> {
-    Object.assign(todo, params);
-    await todo.save();
-    return todo;
+    const res = await client.post("/todos.update", {
+      id: todo.id,
+      ...params,
+    });
+    const todoData = res.data?.data;
+
+    if (todoData) {
+      Object.assign(todo, todoData);
+      return todo;
+    }
+
+    throw new Error("Failed to update todo");
   }
 
   /**
@@ -170,7 +178,8 @@ export default class TodosStore extends Store<Todo> {
    */
   @action
   async delete(todo: Todo): Promise<void> {
-    await super.delete(todo);
+    await client.post("/todos.delete", { id: todo.id });
+    this.remove(todo.id);
   }
 
   /**
