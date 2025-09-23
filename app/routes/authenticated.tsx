@@ -19,6 +19,7 @@ import {
   settingsPath,
   matchDocumentSlug as slug,
   trashPath,
+  todosPath,
 } from "~/utils/routeHelpers";
 
 const SettingsRoutes = lazy(() => import("./settings"));
@@ -28,6 +29,7 @@ const Document = lazy(() => import("~/scenes/Document"));
 const Drafts = lazy(() => import("~/scenes/Drafts"));
 const Home = lazy(() => import("~/scenes/Home"));
 const Search = lazy(() => import("~/scenes/Search"));
+const Todos = lazy(() => import("~/scenes/Todos"));
 const Trash = lazy(() => import("~/scenes/Trash"));
 
 const RedirectDocument = ({
@@ -71,6 +73,7 @@ function AuthenticatedRoutes() {
               {can.createDocument && (
                 <Route exact path={trashPath()} component={Trash} />
               )}
+              <Route exact path={todosPath()} component={Todos} />
               <Route path={`${homePath()}/:tab?`} component={Home} />
               <Redirect from="/dashboard" to={homePath()} />
               <Redirect exact from="/starred" to={homePath()} />

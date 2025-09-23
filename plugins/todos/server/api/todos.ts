@@ -3,79 +3,57 @@ import SimpleTodoItem, {
   TodoStatus,
   TodoPriority,
 } from "../models/SimpleTodoItem";
-import { requireTeamAccess, canCreateTodos } from "../middlewares/todoAuth";
+import auth from "@server/middlewares/authentication";
 
 const router = new Router();
 
-// Plugin info endpoint
+// Debug endpoint to verify plugin is working
 router.post("todos.info", async (ctx) => {
-  try {
-    // This endpoint doesn't require authentication for testing
-    ctx.body = {
-      ok: true,
-      data: {
-        plugin: "todos",
-        version: "1.0.0",
-        status: "initialized",
-        auth: !!ctx.state.auth,
-        user: ctx.state.auth?.user?.id || "none",
-      },
-    };
-  } catch (error) {
-    ctx.status = 500;
-    ctx.body = {
-      ok: false,
-      error: error.message,
-    };
-  }
-});
-
-// Health check endpoint for testing model functionality - no auth required
-router.post("todos.health", async (ctx) => {
-  try {
-    // Test if we can access the SimpleTodoItem model
-    const modelInfo = {
-      tableName: SimpleTodoItem.tableName,
-      modelName: SimpleTodoItem.name,
-    };
-
-    // Test if we can do a simple query (count)
-    const count = await SimpleTodoItem.count();
-
-    ctx.body = {
-      ok: true,
-      data: {
-        message: "Todo model is working",
-        modelInfo,
-        count,
-      },
-    };
-  } catch (error: unknown) {
-    ctx.body = {
-      ok: false,
-      error: "model_error",
-      message: `Model test failed: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
+  ctx.body = {
+    ok: true,
+    message: "Todos plugin is working",
+    timestamp: new Date().toISOString(),
+  };
 });
 
 // Create a new todo item
-router.post("todos.create", canCreateTodos(), async (ctx) => {
-  const { title, description, priority, deadline, documentId, collectionId } =
-    ctx.request.body;
+router.post("todos.create", auth(), async (ctx) => {
+  const {
+    title,
+    description,
+    priority,
+    dueDate,
+    deadline,
+    documentId,
+    collectionId,
+  } = ctx.request.body;
 
   const { user } = ctx.state.auth;
 
   try {
+    // Convert frontend priority values to backend enum values
+    let backendPriority = TodoPriority.Medium; // default
+    if (priority === "low") {
+      backendPriority = TodoPriority.Low;
+    } else if (priority === "medium") {
+      backendPriority = TodoPriority.Medium;
+    } else if (priority === "high") {
+      backendPriority = TodoPriority.High;
+    }
+
+    // Use dueDate if provided, fallback to deadline for backward compatibility
+    const deadlineDate = dueDate || deadline;
+
     const todo = await SimpleTodoItem.create({
       title,
-      description,
-      priority: priority || TodoPriority.Medium,
-      deadline: deadline ? new Date(deadline) : undefined,
-      documentId,
-      collectionId,
+      description: description || null,
+      priority: backendPriority,
+      deadline: deadlineDate ? new Date(deadlineDate) : undefined,
+      documentId: documentId || undefined,
+      collectionId: collectionId || undefined,
       createdById: user.id,
       teamId: user.teamId,
+      status: TodoStatus.Pending,
     });
 
     ctx.body = {
@@ -92,7 +70,7 @@ router.post("todos.create", canCreateTodos(), async (ctx) => {
 });
 
 // List todos
-router.post("todos.list", requireTeamAccess(), async (ctx) => {
+router.post("todos.list", auth(), async (ctx) => {
   try {
     const { user } = ctx.state.auth;
     const { documentId, collectionId, status } = ctx.request.body;
@@ -111,8 +89,10 @@ router.post("todos.list", requireTeamAccess(), async (ctx) => {
       where.status = status;
     }
 
-    // For now, return empty list since we're testing
-    const todos: unknown[] = [];
+    const todos = await SimpleTodoItem.findAll({
+      where,
+      order: [["createdAt", "DESC"]],
+    });
 
     ctx.body = {
       ok: true,
@@ -128,7 +108,7 @@ router.post("todos.list", requireTeamAccess(), async (ctx) => {
 });
 
 // Update todo
-router.post("todos.update", requireTeamAccess(), async (ctx) => {
+router.post("todos.update", auth(), async (ctx) => {
   const { id, title, description, status, priority, deadline } =
     ctx.request.body;
   const { user } = ctx.state.auth;
@@ -176,7 +156,7 @@ router.post("todos.update", requireTeamAccess(), async (ctx) => {
 });
 
 // Delete todo
-router.post("todos.delete", requireTeamAccess(), async (ctx) => {
+router.post("todos.delete", auth(), async (ctx) => {
   const { id } = ctx.request.body;
   const { user } = ctx.state.auth;
 
