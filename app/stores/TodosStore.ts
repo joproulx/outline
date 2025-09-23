@@ -1,7 +1,8 @@
-import { action, computed } from "mobx";
+import { action, computed, runInAction } from "mobx";
 import Todo from "~/models/Todo";
+import { client } from "~/utils/ApiClient";
 import RootStore from "./RootStore";
-import Store from "./base/Store";
+import Store, { type FetchPageParams } from "./base/Store";
 
 export default class TodosStore extends Store<Todo> {
   constructor(rootStore: RootStore) {
@@ -75,6 +76,34 @@ export default class TodosStore extends Store<Todo> {
         (todo.description &&
           todo.description.toLowerCase().includes(searchTerm))
     );
+  }
+
+  /**
+   * Override fetchPage to handle custom API response format
+   */
+  async fetchPage(params?: FetchPageParams): Promise<Todo[]> {
+    this.isFetching = true;
+
+    try {
+      const res = await client.post("/api/todos", params);
+      const todos = res.data?.data || [];
+
+      runInAction(() => {
+        if (Array.isArray(todos)) {
+          this.addPolicies(res.policies);
+          todos.forEach((todo) => this.add(todo));
+          this.isLoaded = true;
+        }
+      });
+
+      return Array.isArray(todos) ? todos : [];
+    } catch (_error) {
+      return [];
+    } finally {
+      runInAction(() => {
+        this.isFetching = false;
+      });
+    }
   }
 
   /**

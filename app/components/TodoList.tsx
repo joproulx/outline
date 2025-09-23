@@ -22,9 +22,10 @@ const TodoList = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
 
   useEffect(() => {
-    // Load todos when component mounts
-    todos.fetchPage();
-  }, [todos]);
+    if (!todos.isLoaded && !todos.isFetching) {
+      todos.fetchPage();
+    }
+  }, [todos.isLoaded, todos.isFetching, todos]);
 
   const filteredTodos = React.useMemo(() => {
     let result = todos.all;
@@ -38,7 +39,8 @@ const TodoList = () => {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [searchQuery, todos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, todos, todos.isLoaded, todos.all.length]);
 
   const handleCreateTodo = React.useCallback(() => {
     setEditingTodo(null);
