@@ -1,0 +1,64 @@
+import { allow } from "@server/policies";
+import { User } from "@server/models";
+import SimpleTodoItem from "../models/SimpleTodoItem";
+
+allow(User, "createTodo", (user, team) => {
+  if (!team) return false;
+  return user.teamId === team.id;
+});
+
+allow(User, "read", SimpleTodoItem, (user, todo) => {
+  if (!todo) return false;
+  
+  // Users can read todos in their team
+  if (user.teamId !== todo.teamId) return false;
+  
+  // Can read if:
+  // 1. They created the todo
+  // 2. They are assigned to the todo
+  // 3. They are a team admin
+  return (
+    todo.createdById === user.id ||
+    user.isAdmin ||
+    // TODO: Check if user is assigned (when we implement assignments)
+    true // For now, allow team members to read all todos
+  );
+});
+
+allow(User, "update", SimpleTodoItem, (user, todo) => {
+  if (!todo) return false;
+  
+  // Users can only update todos in their team
+  if (user.teamId !== todo.teamId) return false;
+  
+  // Can update if:
+  // 1. They created the todo
+  // 2. They are a team admin
+  // 3. They are assigned to the todo (for status updates)
+  return (
+    todo.createdById === user.id ||
+    user.isAdmin
+    // TODO: Add assigned user check when assignments are implemented
+  );
+});
+
+allow(User, "delete", SimpleTodoItem, (user, todo) => {
+  if (!todo) return false;
+  
+  // Users can only delete todos in their team
+  if (user.teamId !== todo.teamId) return false;
+  
+  // Can delete if:
+  // 1. They created the todo
+  // 2. They are a team admin
+  return (
+    todo.createdById === user.id ||
+    user.isAdmin
+  );
+});
+
+// List todos - users can list todos in their team
+allow(User, "listTodos", (user, team) => {
+  if (!team) return false;
+  return user.teamId === team.id;
+});

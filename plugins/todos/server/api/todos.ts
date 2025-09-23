@@ -3,6 +3,7 @@ import SimpleTodoItem, {
   TodoStatus,
   TodoPriority,
 } from "../models/SimpleTodoItem";
+import { requireTeamAccess, canCreateTodos } from "../middlewares/todoAuth";
 
 const router = new Router();
 
@@ -59,20 +60,9 @@ router.post("todos.health", async (ctx) => {
 });
 
 // Create a new todo item
-router.post("todos.create", async (ctx) => {
+router.post("todos.create", canCreateTodos(), async (ctx) => {
   const { title, description, priority, deadline, documentId, collectionId } =
     ctx.request.body;
-
-  // Check if user is authenticated
-  if (!ctx.state.auth || !ctx.state.auth.user) {
-    ctx.status = 401;
-    ctx.body = {
-      ok: false,
-      error: "authentication_required",
-      message: "You must be logged in to create todos",
-    };
-    return;
-  }
 
   const { user } = ctx.state.auth;
 
@@ -102,19 +92,8 @@ router.post("todos.create", async (ctx) => {
 });
 
 // List todos
-router.post("todos.list", async (ctx) => {
+router.post("todos.list", requireTeamAccess(), async (ctx) => {
   try {
-    // Check if user is authenticated
-    if (!ctx.state.auth || !ctx.state.auth.user) {
-      ctx.status = 401;
-      ctx.body = {
-        ok: false,
-        error: "authentication_required",
-        message: "This endpoint requires authentication",
-      };
-      return;
-    }
-
     const { user } = ctx.state.auth;
     const { documentId, collectionId, status } = ctx.request.body;
 
@@ -149,7 +128,7 @@ router.post("todos.list", async (ctx) => {
 });
 
 // Update todo
-router.post("todos.update", async (ctx) => {
+router.post("todos.update", requireTeamAccess(), async (ctx) => {
   const { id, title, description, status, priority, deadline } =
     ctx.request.body;
   const { user } = ctx.state.auth;
@@ -197,7 +176,7 @@ router.post("todos.update", async (ctx) => {
 });
 
 // Delete todo
-router.post("todos.delete", async (ctx) => {
+router.post("todos.delete", requireTeamAccess(), async (ctx) => {
   const { id } = ctx.request.body;
   const { user } = ctx.state.auth;
 

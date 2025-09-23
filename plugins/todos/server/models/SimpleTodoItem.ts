@@ -27,9 +27,9 @@ export enum TodoPriority {
 
 @Table({ tableName: "todo_items", modelName: "todoItem" })
 @Fix
-class TodoItem extends ParanoidModel<
-  InferAttributes<TodoItem>,
-  Partial<InferCreationAttributes<TodoItem>>
+class SimpleTodoItem extends ParanoidModel<
+  InferAttributes<SimpleTodoItem>,
+  Partial<InferCreationAttributes<SimpleTodoItem>>
 > {
   @Length({
     max: 255,
@@ -116,4 +116,4 @@ class TodoItem extends ParanoidModel<
   }
 }
 
-export default TodoItem;
+export default SimpleTodoItem;
