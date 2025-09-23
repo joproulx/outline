@@ -74,6 +74,7 @@ function AuthenticatedRoutes() {
                 <Route exact path={trashPath()} component={Trash} />
               )}
               <Route exact path={tasksPath()} component={Tasks} />
+              <Route exact path={todosPath()} component={Todos} />
               <Route path={`${homePath()}/:tab?`} component={Home} />
               <Redirect from="/dashboard" to={homePath()} />
               <Redirect exact from="/starred" to={homePath()} />
