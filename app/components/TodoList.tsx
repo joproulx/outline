@@ -18,7 +18,7 @@ const TodoList = () => {
   const { todos } = useStores();
 
   const [showForm, setShowForm] = React.useState(false);
-  const [editingTodo, setEditingTodo] = React.useState<Todo | null>(null);
+  const [editingTodoId, setEditingTodoId] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
 
   useEffect(() => {
@@ -43,13 +43,13 @@ const TodoList = () => {
   }, [searchQuery, todos, todos.isLoaded, todos.all.length]);
 
   const handleCreateTodo = React.useCallback(() => {
-    setEditingTodo(null);
+    setEditingTodoId(null);
     setShowForm(true);
   }, []);
 
   const handleEditTodo = React.useCallback((todo: Todo) => {
-    setEditingTodo(todo);
-    setShowForm(true);
+    setEditingTodoId(todo.id);
+    setShowForm(false); // Don't show the separate form
   }, []);
 
   const handleDeleteTodo = React.useCallback(
@@ -63,12 +63,16 @@ const TodoList = () => {
 
   const handleSaveTodo = React.useCallback(() => {
     setShowForm(false);
-    setEditingTodo(null);
+    setEditingTodoId(null);
+  }, []);
+
+  const handleCancelEdit = React.useCallback(() => {
+    setEditingTodoId(null);
   }, []);
 
   const handleCancelForm = React.useCallback(() => {
     setShowForm(false);
-    setEditingTodo(null);
+    setEditingTodoId(null);
   }, []);
 
   const stats = todos.stats;
@@ -111,7 +115,7 @@ const TodoList = () => {
       {showForm && (
         <FormContainer>
           <TodoForm
-            todo={editingTodo || undefined}
+            todo={undefined}
             onSave={handleSaveTodo}
             onCancel={handleCancelForm}
           />
@@ -142,8 +146,11 @@ const TodoList = () => {
               <TodoItem
                 key={todo.id}
                 todo={todo}
+                isEditing={editingTodoId === todo.id}
                 onEdit={handleEditTodo}
                 onDelete={handleDeleteTodo}
+                onSave={handleSaveTodo}
+                onCancel={handleCancelEdit}
               />
             ))}
           </TodosList>

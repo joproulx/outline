@@ -133,15 +133,21 @@ export default class TodosStore extends Store<Todo> {
     dueDate?: string;
     tags?: string[];
   }): Promise<Todo> {
-    const res = await client.post("/todos.create", params);
-    const todoData = res.data?.data;
+    try {
+      const res = await client.post("/todos.create", params);
 
-    if (todoData) {
-      const todo = this.add(todoData);
-      return todo;
+      // The API returns the todo data directly in res.data, not res.data.data
+      const todoData = res.data?.data || res.data;
+
+      if (todoData && todoData.id) {
+        const todo = this.add(todoData);
+        return todo;
+      }
+
+      throw new Error("Failed to create todo - no valid data returned");
+    } catch (_error) {
+      throw new Error("Failed to create todo");
     }
-
-    throw new Error("Failed to create todo");
   }
 
   /**
@@ -159,18 +165,24 @@ export default class TodosStore extends Store<Todo> {
       completed: boolean;
     }>
   ): Promise<Todo> {
-    const res = await client.post("/todos.update", {
-      id: todo.id,
-      ...params,
-    });
-    const todoData = res.data?.data;
+    try {
+      const res = await client.post("/todos.update", {
+        id: todo.id,
+        ...params,
+      });
 
-    if (todoData) {
-      Object.assign(todo, todoData);
-      return todo;
+      // The API returns the todo data directly in res.data, not res.data.data
+      const todoData = res.data?.data || res.data;
+
+      if (todoData && todoData.id) {
+        Object.assign(todo, todoData);
+        return todo;
+      }
+
+      throw new Error("Failed to update todo - no valid data returned");
+    } catch (_error) {
+      throw new Error("Failed to update todo");
     }
-
-    throw new Error("Failed to update todo");
   }
 
   /**

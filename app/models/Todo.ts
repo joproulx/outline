@@ -71,9 +71,9 @@ class Todo extends Model {
 
     this.completed = true;
     // Update through the store to make proper API call
-    const store = this.store as any;
-    if (store.update) {
-      await store.update(this, { completed: true });
+    const store = this.store as unknown;
+    if (store && typeof store === "object" && "update" in store) {
+      await (store as any).update(this, { completed: true });
     }
   }
 
@@ -88,9 +88,9 @@ class Todo extends Model {
 
     this.completed = false;
     // Update through the store to make proper API call
-    const store = this.store as any;
-    if (store.update) {
-      await store.update(this, { completed: false });
+    const store = this.store as unknown;
+    if (store && typeof store === "object" && "update" in store) {
+      await (store as any).update(this, { completed: false });
     }
   }
 
@@ -99,8 +99,14 @@ class Todo extends Model {
    */
   @action
   async toggle(): Promise<void> {
-    this.completed = !this.completed;
-    await this.save();
+    const newCompleted = !this.completed;
+    this.completed = newCompleted;
+
+    // Update through the store to make proper API call
+    const store = this.store as unknown;
+    if (store && typeof store === "object" && "update" in store) {
+      await (store as any).update(this, { completed: newCompleted });
+    }
   }
 
   /**

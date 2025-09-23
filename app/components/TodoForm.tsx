@@ -68,7 +68,7 @@ const TodoForm = ({ todo, onSave, onCancel }: Props) => {
 
         onSave(savedTodo);
       } catch (_error) {
-        // Handle error without console statement
+        // Handle error silently for now
       } finally {
         setIsLoading(false);
       }
