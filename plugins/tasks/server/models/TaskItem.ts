@@ -162,9 +162,9 @@ class TaskItem extends ParanoidModel<
 
     const lock = transaction
       ? {
-        level: transaction.LOCK.UPDATE,
-        of: this,
-      }
+          level: transaction.LOCK.UPDATE,
+          of: this,
+        }
       : undefined;
 
     const assignments = await TaskAssignment.findAll({

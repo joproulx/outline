@@ -1,8 +1,5 @@
 import Router from "koa-router";
-import TaskItem, {
-  TaskStatus,
-  TaskPriority,
-} from "../models/TaskItem";
+import TaskItem, { TaskStatus, TaskPriority } from "../models/TaskItem";
 import auth from "@server/middlewares/authentication";
 
 const router = new Router();
