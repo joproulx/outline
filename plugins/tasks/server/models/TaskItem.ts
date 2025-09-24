@@ -1,5 +1,6 @@
 import { InferAttributes, InferCreationAttributes } from "sequelize";
 import {
+  AfterDestroy,
   BelongsTo,
   Column,
   DataType,
@@ -11,6 +12,7 @@ import {
 } from "sequelize-typescript";
 import { Collection, Document, Team, User } from "@server/models";
 import ParanoidModel from "@server/models/base/ParanoidModel";
+import { type HookContext } from "@server/models/base/Model";
 import Fix from "@server/models/decorators/Fix";
 import TaskAssignment from "./TaskAssignment";
 
@@ -85,6 +87,9 @@ class TaskItem extends ParanoidModel<
   @Column(DataType.DATE)
   deadline?: Date;
 
+  @Column(DataType.JSON)
+  tags?: string[];
+
   @Column(DataType.DATE)
   completedAt?: Date;
 
@@ -147,6 +152,30 @@ class TaskItem extends ParanoidModel<
     this.status = TaskStatus.Pending;
     this.completedAt = undefined;
     await this.save();
+  }
+
+  // hooks
+
+  @AfterDestroy
+  public static async deleteTaskAssignments(model: TaskItem, ctx: HookContext) {
+    const { transaction } = ctx;
+
+    const lock = transaction
+      ? {
+        level: transaction.LOCK.UPDATE,
+        of: this,
+      }
+      : undefined;
+
+    const assignments = await TaskAssignment.findAll({
+      where: { taskId: model.id },
+      transaction,
+      lock,
+    });
+
+    await Promise.all(
+      assignments.map((assignment) => assignment.destroy({ transaction }))
+    );
   }
 }
 

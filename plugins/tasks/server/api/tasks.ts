@@ -1,8 +1,8 @@
 import Router from "koa-router";
-import SimpleTaskItem, {
+import TaskItem, {
   TaskStatus,
   TaskPriority,
-} from "../models/SimpleTaskItem";
+} from "../models/TaskItem";
 import auth from "@server/middlewares/authentication";
 
 const router = new Router();
@@ -59,7 +59,7 @@ router.post("tasks.create", auth(), async (ctx) => {
       }
     }
 
-    const task = await SimpleTaskItem.create({
+    const task = await TaskItem.create({
       title,
       description: description || null,
       priority: backendPriority,
@@ -119,7 +119,7 @@ router.post("tasks.list", auth(), async (ctx) => {
       where.status = status;
     }
 
-    const tasks = await SimpleTaskItem.findAll({
+    const tasks = await TaskItem.findAll({
       where,
       order: [["createdAt", "DESC"]],
     });
@@ -167,7 +167,7 @@ router.post("tasks.update", auth(), async (ctx) => {
   const { user } = ctx.state.auth;
 
   try {
-    const task = await SimpleTaskItem.findOne({
+    const task = await TaskItem.findOne({
       where: {
         id,
         teamId: user.teamId,
@@ -252,7 +252,7 @@ router.post("tasks.delete", auth(), async (ctx) => {
   const { user } = ctx.state.auth;
 
   try {
-    const task = await SimpleTaskItem.findOne({
+    const task = await TaskItem.findOne({
       where: {
         id,
         teamId: user.teamId,

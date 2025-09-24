@@ -121,6 +121,18 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      deletedAt: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
     });
 
     // Add indexes for performance

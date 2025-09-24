@@ -3,15 +3,16 @@ import config from "../plugin.json";
 import router from "./api/tasks";
 import env from "./env";
 import { sequelize } from "@server/storage/database";
-import SimpleTaskItem from "./models/SimpleTaskItem";
+import TaskItem from "./models/TaskItem";
+import TaskAssignment from "./models/TaskAssignment";
 
 // Task plugin is always enabled as it doesn't require external services
 const enabled = true;
 
 if (enabled) {
-  // Try to register the task model with the existing sequelize instance
+  // Try to register the task models with the existing sequelize instance
   try {
-    sequelize.addModels([SimpleTaskItem]);
+    sequelize.addModels([TaskItem, TaskAssignment]);
 
     // Temporarily disable policies to fix login issue
     // TODO: Debug policy system integration for plugin models

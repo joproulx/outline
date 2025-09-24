@@ -53,6 +53,8 @@ import { RelationshipType } from "@server/models/Relationship";
 import AttachmentHelper from "@server/models/helpers/AttachmentHelper";
 import { hash } from "@server/utils/crypto";
 import { OAuthInterface } from "@server/utils/oauth/OAuthInterface";
+import TaskItem, { TaskStatus, TaskPriority } from "../../plugins/tasks/server/models/TaskItem";
+import TaskAssignment from "../../plugins/tasks/server/models/TaskAssignment";
 
 export async function buildApiKey(overrides: Partial<ApiKey> = {}) {
   if (!overrides.userId) {
@@ -215,11 +217,11 @@ export async function buildUser(overrides: Partial<User> = {}) {
       lastActiveAt: new Date("2018-01-03T00:00:00.000Z"),
       authentications: authenticationProvider
         ? [
-            {
-              authenticationProviderId: authenticationProvider.id,
-              providerId: randomString(32),
-            },
-          ]
+          {
+            authenticationProviderId: authenticationProvider.id,
+            providerId: randomString(32),
+          },
+        ]
         : [],
       ...overrides,
     } as Partial<InferCreationAttributes<User>>,
@@ -419,8 +421,8 @@ export async function buildDocument(
   if (overrides.collectionId && overrides.publishedAt !== null) {
     collection = collection
       ? await Collection.findByPk(overrides.collectionId, {
-          includeDocumentStructure: true,
-        })
+        includeDocumentStructure: true,
+      })
       : undefined;
 
     await collection?.addDocumentToStructure(document, 0);
@@ -771,8 +773,8 @@ export async function buildOAuthAuthentication({
   const oauthClient = oauthClientId
     ? await OAuthClient.findByPk(oauthClientId, { rejectOnEmpty: true })
     : await buildOAuthClient({
-        teamId: user.teamId,
-      });
+      teamId: user.teamId,
+    });
   const oauthInterfaceClient = {
     id: oauthClient.clientId,
     grants: ["authorization_code"],
@@ -854,6 +856,50 @@ export async function buildRelationship(overrides: Partial<Relationship> = {}) {
 
   return Relationship.create({
     type: RelationshipType.Backlink,
+    ...overrides,
+  });
+}
+
+export async function buildTaskItem(overrides: Partial<TaskItem> = {}) {
+  if (!overrides.teamId) {
+    const team = await buildTeam();
+    overrides.teamId = team.id;
+  }
+
+  if (!overrides.createdById) {
+    const user = await buildUser({ teamId: overrides.teamId });
+    overrides.createdById = user.id;
+  }
+
+  return TaskItem.create({
+    title: faker.lorem.sentence(),
+    description: faker.lorem.paragraph(),
+    status: faker.helpers.arrayElement(Object.values(TaskStatus)),
+    priority: faker.helpers.arrayElement(Object.values(TaskPriority)),
+    deadline: faker.date.future(),
+    tags: [faker.lorem.word(), faker.lorem.word()],
+    ...overrides,
+  });
+}
+
+export async function buildTaskAssignment(overrides: Partial<TaskAssignment> = {}) {
+  if (!overrides.taskId) {
+    const taskItem = await buildTaskItem();
+    overrides.taskId = taskItem.id;
+  }
+
+  if (!overrides.userId) {
+    const user = await buildUser();
+    overrides.userId = user.id;
+  }
+
+  if (!overrides.assignedById) {
+    const assignedBy = await buildUser();
+    overrides.assignedById = assignedBy.id;
+  }
+
+  return TaskAssignment.create({
+    assignedAt: faker.date.recent(),
     ...overrides,
   });
 }
