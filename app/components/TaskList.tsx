@@ -19,6 +19,16 @@ const TaskList = () => {
   const [showForm, setShowForm] = React.useState(false);
   const [editingTaskId, setEditingTaskId] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("");
+
+  // Debounce search query to improve performance
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   React.useEffect(() => {
     if (!tasks.isLoaded && !tasks.isFetching) {
@@ -29,17 +39,22 @@ const TaskList = () => {
   const filteredTasks = React.useMemo(() => {
     let result = tasks.all;
 
-    // Apply search filter
-    if (searchQuery) {
-      result = tasks.search(searchQuery);
+    // Apply search filter with debounced search
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.trim().toLowerCase();
+      result = result.filter(
+        (task) =>
+          task.title.toLowerCase().includes(query) ||
+          task.description?.toLowerCase().includes(query) ||
+          task.tags.some((tag) => tag.toLowerCase().includes(query))
+      );
     }
 
     return result.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, tasks, tasks.isLoaded, tasks.all.length]);
+  }, [debouncedSearchQuery, tasks.all]);
 
   const handleCreateTask = React.useCallback(() => {
     setEditingTaskId(null);
@@ -52,10 +67,18 @@ const TaskList = () => {
   }, []);
 
   const handleDeleteTask = React.useCallback(
-    async (task: Task) => {
-      if (window.confirm(t("Are you sure you want to delete this task?"))) {
-        await tasks.delete(task);
-      }
+    (task: Task) => {
+      // Use setTimeout to make the confirmation non-blocking
+      setTimeout(async () => {
+        if (window.confirm(t("Are you sure you want to delete this task?"))) {
+          try {
+            await tasks.delete(task);
+          } catch (_error) {
+            // Error will be handled by the tasks store error handling
+            // Could show a toast notification here
+          }
+        }
+      }, 0);
     },
     [tasks, t]
   );
@@ -124,7 +147,7 @@ const TaskList = () => {
       <Content>
         {filteredTasks.length === 0 ? (
           <EmptyState>
-            {searchQuery ? (
+            {debouncedSearchQuery ? (
               <Text type="secondary">{t("No tasks match your search.")}</Text>
             ) : (
               <>

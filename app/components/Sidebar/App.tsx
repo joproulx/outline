@@ -20,7 +20,7 @@ import Sidebar from "./Sidebar";
 import ArchiveLink from "./components/ArchiveLink";
 import Collections from "./components/Collections";
 import { DraftsLink } from "./components/DraftsLink";
-import TodosLink from "./components/TodosLink";
+import TasksLink from "./components/TasksLink";
 import DragPlaceholder from "./components/DragPlaceholder";
 import HistoryNavigation from "./components/HistoryNavigation";
 import Section from "./components/Section";
@@ -105,7 +105,7 @@ function AppSidebar() {
                 exact={false}
               />
               {can.createDocument && <DraftsLink />}
-              <TodosLink />
+              <TasksLink />
             </Section>
           </Overflow>
           <Scrollable flex shadow>

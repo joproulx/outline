@@ -20,6 +20,7 @@ type Props = {
 const TaskForm = ({ task, onSave, onCancel }: Props) => {
   const { t } = useTranslation();
   const { tasks } = useStores();
+  const isMountedRef = React.useRef(true);
 
   const [title, setTitle] = React.useState(task?.title || "");
   const [description, setDescription] = React.useState(task?.description || "");
@@ -31,6 +32,14 @@ const TaskForm = ({ task, onSave, onCancel }: Props) => {
   );
   const [tags, setTags] = React.useState(task?.tags.join(", ") || "");
   const [isLoading, setIsLoading] = React.useState(false);
+
+  // Cleanup on unmount
+  React.useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    []
+  );
 
   const priorityOptions = [
     { label: "None", value: "none", type: "item" as const },
@@ -46,7 +55,12 @@ const TaskForm = ({ task, onSave, onCancel }: Props) => {
       if (!title.trim()) {
         return;
       }
+
+      if (!isMountedRef.current) {
+        return;
+      }
       setIsLoading(true);
+
       try {
         const taskData = {
           title: title.trim(),
@@ -66,11 +80,15 @@ const TaskForm = ({ task, onSave, onCancel }: Props) => {
           savedTask = await tasks.create(taskData);
         }
 
-        onSave(savedTask);
+        if (isMountedRef.current) {
+          onSave(savedTask);
+        }
       } catch (_error) {
         // Handle error silently for now
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [title, description, priority, dueDate, tags, task, tasks, onSave]

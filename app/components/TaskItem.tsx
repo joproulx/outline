@@ -31,6 +31,7 @@ const TaskItem = ({
 }: Props) => {
   const { t } = useTranslation();
   const { tasks } = useStores();
+  const isMountedRef = React.useRef(true);
 
   // Form state for editing mode
   const [title, setTitle] = React.useState(task.title);
@@ -44,6 +45,14 @@ const TaskItem = ({
   const [tags, setTags] = React.useState(task.tags.join(", "));
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // Cleanup on unmount
+  React.useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    []
+  );
+
   // Reset form state when editing mode changes
   React.useEffect(() => {
     if (isEditing) {
@@ -55,28 +64,43 @@ const TaskItem = ({
     }
   }, [isEditing, task]);
 
-  const priorityOptions = [
-    { label: "None", value: "none", type: "item" as const },
-    { label: "Low", value: "low", type: "item" as const },
-    { label: "Medium", value: "medium", type: "item" as const },
-    { label: "High", value: "high", type: "item" as const },
-  ];
-  const handleToggleComplete = React.useCallback(async () => {
-    if (!isEditing) {
-      await task.toggle();
+  const priorityOptions = React.useMemo(
+    () => [
+      { label: "None", value: "none", type: "item" as const },
+      { label: "Low", value: "low", type: "item" as const },
+      { label: "Medium", value: "medium", type: "item" as const },
+      { label: "High", value: "high", type: "item" as const },
+    ],
+    []
+  );
+
+  const handleToggleComplete = React.useCallback(() => {
+    if (!isEditing && isMountedRef.current) {
+      // Use setTimeout to avoid blocking the click handler
+      setTimeout(async () => {
+        try {
+          await task.toggle();
+        } catch (_error) {
+          // Error will be handled by the task model's error handling
+        }
+      }, 0);
     }
   }, [task, isEditing]);
 
   const handleEdit = React.useCallback(() => {
-    onEdit(task);
+    if (isMountedRef.current) {
+      onEdit(task);
+    }
   }, [task, onEdit]);
 
   const handleDelete = React.useCallback(() => {
-    onDelete(task);
+    if (isMountedRef.current) {
+      onDelete(task);
+    }
   }, [task, onDelete]);
 
   const handleSave = React.useCallback(async () => {
-    if (!title.trim()) {
+    if (!title.trim() || !isMountedRef.current) {
       return;
     }
 
@@ -94,16 +118,22 @@ const TaskItem = ({
       };
 
       await tasks.update(task, taskData);
-      onSave?.();
+      if (isMountedRef.current) {
+        onSave?.();
+      }
     } catch (_error) {
       // Handle error silently for now
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [title, description, priority, dueDate, tags, task, tasks, onSave]);
 
   const handleCancel = React.useCallback(() => {
-    onCancel?.();
+    if (isMountedRef.current) {
+      onCancel?.();
+    }
   }, [onCancel]);
 
   const priorityIcon = React.useMemo(() => {
