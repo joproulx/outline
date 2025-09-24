@@ -1,0 +1,6 @@
+{
+    "id": "tasks",
+    "name": "Tasks",
+    "priority": 30,
+    "description": "Centralized task management with user assignments, due dates, and document integration."
+}

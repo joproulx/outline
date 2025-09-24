@@ -1,0 +1,243 @@
+import { action, computed, runInAction } from "mobx";
+import Task from "~/models/Task";
+import { client } from "~/utils/ApiClient";
+import RootStore from "./RootStore";
+import Store, { type FetchPageParams } from "./base/Store";
+
+export default class TasksStore extends Store<Task> {
+  constructor(rootStore: RootStore) {
+    super(rootStore, Task);
+  }
+
+  /**
+   * Get all tasks sorted by creation date (newest first)
+   */
+  @computed
+  get all(): Task[] {
+    return this.orderedData.slice();
+  }
+
+  /**
+   * Get all active (incomplete) tasks
+   */
+  @computed
+  get active(): Task[] {
+    return this.filter((task: Task) => !task.completed);
+  }
+
+  /**
+   * Get all completed tasks
+   */
+  @computed
+  get completed(): Task[] {
+    return this.filter((task: Task) => task.completed);
+  }
+
+  /**
+   * Get tasks by priority level
+   */
+  byPriority(priority: "high" | "medium" | "low" | "none"): Task[] {
+    return this.filter((task: Task) => task.priority === priority);
+  }
+
+  /**
+   * Get overdue tasks (past due date and not completed)
+   */
+  @computed
+  get overdue(): Task[] {
+    return this.filter((task: Task) => task.isOverdue);
+  }
+
+  /**
+   * Get tasks due today
+   */
+  @computed
+  get dueToday(): Task[] {
+    return this.filter((task: Task) => task.isDueToday);
+  }
+
+  /**
+   * Get tasks with specific tags
+   */
+  withTags(tags: string[]): Task[] {
+    return this.filter((task: Task) =>
+      tags.some((tag) => task.tags.includes(tag))
+    );
+  }
+
+  /**
+   * Search tasks by title or description
+   */
+  search(query: string): Task[] {
+    const searchTerm = query.toLowerCase();
+    return this.filter(
+      (task: Task) =>
+        task.title.toLowerCase().includes(searchTerm) ||
+        (task.description &&
+          task.description.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  /**
+   * Override fetchPage to handle custom API response format
+   */
+  async fetchPage(params?: FetchPageParams): Promise<Task[]> {
+    this.isFetching = true;
+
+    try {
+      const res = await client.post("/tasks.list", params);
+      const tasks = res.data?.data || [];
+
+      runInAction(() => {
+        if (Array.isArray(tasks)) {
+          this.addPolicies(res.policies);
+          tasks.forEach((task) => this.add(task));
+          this.isLoaded = true;
+        }
+      });
+
+      return Array.isArray(tasks) ? tasks : [];
+    } catch (_error) {
+      return [];
+    } finally {
+      runInAction(() => {
+        this.isFetching = false;
+      });
+    }
+  }
+
+  /**
+   * Get count of active tasks
+   */
+  @computed
+  get activeCount(): number {
+    return this.active.length;
+  }
+
+  /**
+   * Get count of completed tasks
+   */
+  @computed
+  get completedCount(): number {
+    return this.completed.length;
+  }
+
+  /**
+   * Create a new task
+   */
+  @action
+  async create(params: {
+    title: string;
+    description?: string;
+    priority?: "high" | "medium" | "low" | "none";
+    dueDate?: string;
+    tags?: string[];
+  }): Promise<Task> {
+    try {
+      const res = await client.post("/tasks.create", params);
+
+      // The API returns the task data directly in res.data, not res.data.data
+      const taskData = res.data?.data || res.data;
+
+      if (taskData && taskData.id) {
+        const task = this.add(taskData);
+        return task;
+      }
+
+      throw new Error("Failed to create task - no valid data returned");
+    } catch (_error) {
+      throw new Error("Failed to create task");
+    }
+  }
+
+  /**
+   * Update an existing task
+   */
+  @action
+  async update(
+    task: Task,
+    params: Partial<{
+      title: string;
+      description: string | null;
+      priority: "high" | "medium" | "low" | "none";
+      dueDate: string | null;
+      tags: string[];
+      completed: boolean;
+    }>
+  ): Promise<Task> {
+    try {
+      const res = await client.post("/tasks.update", {
+        id: task.id,
+        ...params,
+      });
+
+      // The API returns the task data directly in res.data, not res.data.data
+      const taskData = res.data?.data || res.data;
+
+      if (taskData && taskData.id) {
+        Object.assign(task, taskData);
+        return task;
+      }
+
+      throw new Error("Failed to update task - no valid data returned");
+    } catch (_error) {
+      throw new Error("Failed to update task");
+    }
+  }
+
+  /**
+   * Delete a task
+   */
+  @action
+  async delete(task: Task): Promise<void> {
+    await client.post("/tasks.delete", { id: task.id });
+    this.remove(task.id);
+  }
+
+  /**
+   * Mark all active tasks as completed
+   */
+  @action
+  async completeAll(): Promise<void> {
+    const activeTasks = this.active;
+    await Promise.all(activeTasks.map((task) => task.complete()));
+  }
+
+  /**
+   * Delete all completed tasks
+   */
+  @action
+  async deleteCompleted(): Promise<void> {
+    const completedTasks = this.completed;
+    await Promise.all(completedTasks.map((task) => this.delete(task)));
+  }
+
+  /**
+   * Get all unique tags used across tasks
+   */
+  @computed
+  get allTags(): string[] {
+    const tagSet = new Set<string>();
+    this.data.forEach((task) => {
+      task.tags.forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }
+
+  /**
+   * Get statistics about tasks
+   */
+  @computed
+  get stats() {
+    return {
+      total: this.data.size,
+      active: this.activeCount,
+      completed: this.completedCount,
+      overdue: this.overdue.length,
+      dueToday: this.dueToday.length,
+      high: this.byPriority("high").length,
+      medium: this.byPriority("medium").length,
+      low: this.byPriority("low").length,
+    };
+  }
+}

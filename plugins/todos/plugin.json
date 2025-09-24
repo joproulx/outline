@@ -1,6 +1,0 @@
-{
-    "id": "todos",
-    "name": "Todos",
-    "priority": 30,
-    "description": "Centralized todo management with user assignments, due dates, and document integration."
-}

@@ -2,8 +2,8 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create todo_items table
-    await queryInterface.createTable("todo_items", {
+    // Create task_items table
+    await queryInterface.createTable("task_items", {
       id: {
         type: Sequelize.UUID,
         allowNull: false,
@@ -30,6 +30,11 @@ module.exports = {
       deadline: {
         type: Sequelize.DATE,
         allowNull: true,
+      },
+      tags: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        defaultValue: null,
       },
       documentId: {
         type: Sequelize.UUID,
@@ -81,19 +86,19 @@ module.exports = {
       },
     });
 
-    // Create todo_assignments table
-    await queryInterface.createTable("todo_assignments", {
+    // Create task_assignments table
+    await queryInterface.createTable("task_assignments", {
       id: {
         type: Sequelize.UUID,
         allowNull: false,
         primaryKey: true,
       },
-      todoId: {
+      taskId: {
         type: Sequelize.UUID,
         allowNull: false,
         onDelete: "CASCADE",
         references: {
-          model: "todo_items",
+          model: "task_items",
         },
       },
       userId: {
@@ -119,29 +124,29 @@ module.exports = {
     });
 
     // Add indexes for performance
-    await queryInterface.addIndex("todo_items", ["teamId"]);
-    await queryInterface.addIndex("todo_items", ["createdById"]);
-    await queryInterface.addIndex("todo_items", ["documentId"]);
-    await queryInterface.addIndex("todo_items", ["collectionId"]);
-    await queryInterface.addIndex("todo_items", ["status"]);
-    await queryInterface.addIndex("todo_items", ["deadline"]);
-    await queryInterface.addIndex("todo_items", ["createdAt"]);
-    await queryInterface.addIndex("todo_items", ["deletedAt"]);
+    await queryInterface.addIndex("task_items", ["teamId"]);
+    await queryInterface.addIndex("task_items", ["createdById"]);
+    await queryInterface.addIndex("task_items", ["documentId"]);
+    await queryInterface.addIndex("task_items", ["collectionId"]);
+    await queryInterface.addIndex("task_items", ["status"]);
+    await queryInterface.addIndex("task_items", ["deadline"]);
+    await queryInterface.addIndex("task_items", ["createdAt"]);
+    await queryInterface.addIndex("task_items", ["deletedAt"]);
 
-    await queryInterface.addIndex("todo_assignments", ["todoId"]);
-    await queryInterface.addIndex("todo_assignments", ["userId"]);
-    await queryInterface.addIndex("todo_assignments", ["assignedById"]);
+    await queryInterface.addIndex("task_assignments", ["taskId"]);
+    await queryInterface.addIndex("task_assignments", ["userId"]);
+    await queryInterface.addIndex("task_assignments", ["assignedById"]);
 
     // Add unique constraint to prevent duplicate assignments
-    await queryInterface.addConstraint("todo_assignments", {
-      fields: ["todoId", "userId"],
+    await queryInterface.addConstraint("task_assignments", {
+      fields: ["taskId", "userId"],
       type: "unique",
-      name: "todo_assignments_todo_user_unique",
+      name: "task_assignments_task_user_unique",
     });
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable("todo_assignments");
-    await queryInterface.dropTable("todo_items");
+    await queryInterface.dropTable("task_assignments");
+    await queryInterface.dropTable("task_items");
   },
 };

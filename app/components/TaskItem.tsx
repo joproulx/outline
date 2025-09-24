@@ -9,20 +9,20 @@ import Text from "~/components/Text";
 import Button from "~/components/Button";
 import Input from "~/components/Input";
 import { InputSelect } from "~/components/InputSelect";
-import Todo from "~/models/Todo";
+import Task from "~/models/Task";
 import useStores from "~/hooks/useStores";
 
 type Props = {
-  todo: Todo;
+  task: Task;
   isEditing?: boolean;
-  onEdit: (todo: Todo) => void;
-  onDelete: (todo: Todo) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
   onSave?: () => void;
   onCancel?: () => void;
 };
 
-const TodoItem = ({
-  todo,
+const TaskItem = ({
+  task,
   isEditing = false,
   onEdit,
   onDelete,
@@ -30,30 +30,30 @@ const TodoItem = ({
   onCancel,
 }: Props) => {
   const { t } = useTranslation();
-  const { todos } = useStores();
+  const { tasks } = useStores();
 
   // Form state for editing mode
-  const [title, setTitle] = React.useState(todo.title);
-  const [description, setDescription] = React.useState(todo.description || "");
+  const [title, setTitle] = React.useState(task.title);
+  const [description, setDescription] = React.useState(task.description || "");
   const [priority, setPriority] = React.useState<
     "high" | "medium" | "low" | "none"
-  >(todo.priority);
+  >(task.priority);
   const [dueDate, setDueDate] = React.useState(
-    todo.dueDate ? todo.dueDate.split("T")[0] : ""
+    task.dueDate ? task.dueDate.split("T")[0] : ""
   );
-  const [tags, setTags] = React.useState(todo.tags.join(", "));
+  const [tags, setTags] = React.useState(task.tags.join(", "));
   const [isLoading, setIsLoading] = React.useState(false);
 
   // Reset form state when editing mode changes
   React.useEffect(() => {
     if (isEditing) {
-      setTitle(todo.title);
-      setDescription(todo.description || "");
-      setPriority(todo.priority);
-      setDueDate(todo.dueDate ? todo.dueDate.split("T")[0] : "");
-      setTags(todo.tags.join(", "));
+      setTitle(task.title);
+      setDescription(task.description || "");
+      setPriority(task.priority);
+      setDueDate(task.dueDate ? task.dueDate.split("T")[0] : "");
+      setTags(task.tags.join(", "));
     }
-  }, [isEditing, todo]);
+  }, [isEditing, task]);
 
   const priorityOptions = [
     { label: "None", value: "none", type: "item" as const },
@@ -63,17 +63,17 @@ const TodoItem = ({
   ];
   const handleToggleComplete = React.useCallback(async () => {
     if (!isEditing) {
-      await todo.toggle();
+      await task.toggle();
     }
-  }, [todo, isEditing]);
+  }, [task, isEditing]);
 
   const handleEdit = React.useCallback(() => {
-    onEdit(todo);
-  }, [todo, onEdit]);
+    onEdit(task);
+  }, [task, onEdit]);
 
   const handleDelete = React.useCallback(() => {
-    onDelete(todo);
-  }, [todo, onDelete]);
+    onDelete(task);
+  }, [task, onDelete]);
 
   const handleSave = React.useCallback(async () => {
     if (!title.trim()) {
@@ -82,7 +82,7 @@ const TodoItem = ({
 
     setIsLoading(true);
     try {
-      const todoData = {
+      const taskData = {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
@@ -93,21 +93,21 @@ const TodoItem = ({
           .filter(Boolean),
       };
 
-      await todos.update(todo, todoData);
+      await tasks.update(task, taskData);
       onSave?.();
     } catch (_error) {
       // Handle error silently for now
     } finally {
       setIsLoading(false);
     }
-  }, [title, description, priority, dueDate, tags, todo, todos, onSave]);
+  }, [title, description, priority, dueDate, tags, task, tasks, onSave]);
 
   const handleCancel = React.useCallback(() => {
     onCancel?.();
   }, [onCancel]);
 
   const priorityIcon = React.useMemo(() => {
-    switch (todo.priority) {
+    switch (task.priority) {
       case "high":
         return <ClockIcon color="#e74c3c" size={14} />;
       case "medium":
@@ -117,15 +117,15 @@ const TodoItem = ({
       default:
         return null;
     }
-  }, [todo.priority]);
+  }, [task.priority]);
 
   const isValid = title.trim().length > 0;
 
   if (isEditing) {
     return (
       <Container
-        $completed={todo.completed}
-        $overdue={todo.isOverdue}
+        $completed={task.completed}
+        $overdue={task.isOverdue}
         $editing={true}
       >
         <EditForm>
@@ -203,42 +203,42 @@ const TodoItem = ({
   }
 
   return (
-    <Container $completed={todo.completed} $overdue={todo.isOverdue}>
+    <Container $completed={task.completed} $overdue={task.isOverdue}>
       <Flex align="center" gap={12}>
         <CheckboxButton
           type="button"
           onClick={handleToggleComplete}
-          $completed={todo.completed}
-          $priority={todo.priority}
+          $completed={task.completed}
+          $priority={task.priority}
         >
-          <CheckboxIcon checked={todo.completed} size={16} />
+          <CheckboxIcon checked={task.completed} size={16} />
         </CheckboxButton>
 
         <Content>
           <Header>
-            <Title $completed={todo.completed}>{todo.title}</Title>
+            <Title $completed={task.completed}>{task.title}</Title>
             <Flex align="center" gap={8}>
               {priorityIcon}
-              {todo.dueDate && (
-                <DueDate $overdue={todo.isOverdue} $dueToday={todo.isDueToday}>
-                  {todo.formattedDueDate}
+              {task.dueDate && (
+                <DueDate $overdue={task.isOverdue} $dueToday={task.isDueToday}>
+                  {task.formattedDueDate}
                 </DueDate>
               )}
             </Flex>
           </Header>
 
-          {todo.description && (
-            <Description $completed={todo.completed}>
-              {todo.description}
+          {task.description && (
+            <Description $completed={task.completed}>
+              {task.description}
             </Description>
           )}
 
-          {todo.tags && todo.tags.length > 0 && (
+          {task.tags && task.tags.length > 0 && (
             <Tags>
-              {todo.tags.map((tag, index) => (
+              {task.tags.map((tag, index) => (
                 <Tag key={tag}>
                   #{tag}
-                  {index < todo.tags.length - 1 ? ", " : ""}
+                  {index < task.tags.length - 1 ? ", " : ""}
                 </Tag>
               ))}
             </Tags>
@@ -455,4 +455,4 @@ const DateInput = styled.input`
   }
 `;
 
-export default observer(TodoItem);
+export default observer(TaskItem);

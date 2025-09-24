@@ -10,7 +10,7 @@ import {
 import { User } from "@server/models";
 import ParanoidModel from "@server/models/base/ParanoidModel";
 import Fix from "@server/models/decorators/Fix";
-import TodoItem from "./TodoItem";
+import TaskItem from "./TaskItem";
 
 @DefaultScope(() => ({
   include: [
@@ -26,22 +26,22 @@ import TodoItem from "./TodoItem";
     },
   ],
 }))
-@Table({ tableName: "todo_assignments", modelName: "todoAssignment" })
+@Table({ tableName: "task_assignments", modelName: "taskAssignment" })
 @Fix
-class TodoAssignment extends ParanoidModel<
-  InferAttributes<TodoAssignment>,
-  Partial<InferCreationAttributes<TodoAssignment>>
+class TaskAssignment extends ParanoidModel<
+  InferAttributes<TaskAssignment>,
+  Partial<InferCreationAttributes<TaskAssignment>>
 > {
   @Column(DataType.DATE)
   assignedAt: Date;
 
   // Associations
-  @BelongsTo(() => TodoItem, "todoId")
-  todoItem: TodoItem;
+  @BelongsTo(() => TaskItem, "taskId")
+  taskItem: TaskItem;
 
-  @ForeignKey(() => TodoItem)
+  @ForeignKey(() => TaskItem)
   @Column(DataType.UUID)
-  todoId: string;
+  taskId: string;
 
   @BelongsTo(() => User, "userId")
   user: User;
@@ -59,12 +59,12 @@ class TodoAssignment extends ParanoidModel<
 
   // Instance methods
   static async createAssignment(
-    todoId: string,
+    taskId: string,
     userId: string,
     assignedById: string
-  ): Promise<TodoAssignment> {
+  ): Promise<TaskAssignment> {
     return this.create({
-      todoId,
+      taskId,
       userId,
       assignedById,
       assignedAt: new Date(),
@@ -72,16 +72,16 @@ class TodoAssignment extends ParanoidModel<
   }
 
   static async removeAssignment(
-    todoId: string,
+    taskId: string,
     userId: string
   ): Promise<number> {
     return this.destroy({
       where: {
-        todoId,
+        taskId,
         userId,
       },
     });
   }
 }
 
-export default TodoAssignment;
+export default TaskAssignment;

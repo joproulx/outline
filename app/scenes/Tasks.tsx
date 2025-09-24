@@ -3,16 +3,16 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { CheckboxIcon } from "outline-icons";
 import Scene from "~/components/Scene";
-import TodoList from "~/components/TodoList";
+import TaskList from "~/components/TaskList";
 
-function Todos() {
+function Tasks() {
   const { t } = useTranslation();
 
   return (
-    <Scene title={t("Todos")} icon={<CheckboxIcon checked={false} />}>
-      <TodoList />
+    <Scene title={t("Tasks")} icon={<CheckboxIcon checked={false} />}>
+      <TaskList />
     </Scene>
   );
 }
 
-export default observer(Todos);
+export default observer(Tasks);

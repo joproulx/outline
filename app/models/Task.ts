@@ -4,25 +4,25 @@ import Model from "./base/Model";
 import Field from "./decorators/Field";
 import Relation from "./decorators/Relation";
 
-class Todo extends Model {
-  static modelName = "Todo";
+class Task extends Model {
+  static modelName = "Task";
 
   /**
-   * The title of the todo item
+   * The title of the task item
    */
   @Field
   @observable
   title: string;
 
   /**
-   * Optional description or notes for the todo
+   * Optional description or notes for the task
    */
   @Field
   @observable
   description: string | null;
 
   /**
-   * Whether the todo is completed
+   * Whether the task is completed
    */
   @Field
   @observable
@@ -36,32 +36,32 @@ class Todo extends Model {
   priority: "high" | "medium" | "low" | "none";
 
   /**
-   * Optional due date for the todo
+   * Optional due date for the task
    */
   @Field
   @observable
   dueDate: string | null;
 
   /**
-   * Tags associated with this todo
+   * Tags associated with this task
    */
   @Field
   @observable
   tags: string[] = [];
 
   /**
-   * The user who created this todo
+   * The user who created this task
    */
   @Relation(() => User)
   createdBy: User;
 
   /**
-   * The ID of the user who created this todo
+   * The ID of the user who created this task
    */
   createdById: string;
 
   /**
-   * Mark this todo as completed
+   * Mark this task as completed
    */
   @action
   async complete(): Promise<void> {
@@ -78,7 +78,7 @@ class Todo extends Model {
   }
 
   /**
-   * Mark this todo as incomplete
+   * Mark this task as incomplete
    */
   @action
   async uncomplete(): Promise<void> {
@@ -110,7 +110,7 @@ class Todo extends Model {
   }
 
   /**
-   * Whether this todo is overdue (has a due date in the past and is not completed)
+   * Whether this task is overdue (has a due date in the past and is not completed)
    */
   @computed
   get isOverdue(): boolean {
@@ -137,7 +137,7 @@ class Todo extends Model {
   }
 
   /**
-   * Whether this todo is due today
+   * Whether this task is due today
    */
   @computed
   get isDueToday(): boolean {
@@ -227,4 +227,4 @@ class Todo extends Model {
   }
 }
 
-export default Todo;
+export default Task;

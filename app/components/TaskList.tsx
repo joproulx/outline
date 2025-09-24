@@ -1,6 +1,5 @@
 import { observer } from "mobx-react";
 import * as React from "react";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { PlusIcon } from "outline-icons";
@@ -8,31 +7,31 @@ import { s } from "@shared/styles";
 import Button from "~/components/Button";
 import Input from "~/components/Input";
 import Text from "~/components/Text";
-import TodoForm from "~/components/TodoForm";
-import TodoItem from "~/components/TodoItem";
-import Todo from "~/models/Todo";
+import TaskForm from "~/components/TaskForm";
+import TaskItem from "~/components/TaskItem";
+import Task from "~/models/Task";
 import useStores from "~/hooks/useStores";
 
-const TodoList = () => {
+const TaskList = () => {
   const { t } = useTranslation();
-  const { todos } = useStores();
+  const { tasks } = useStores();
 
   const [showForm, setShowForm] = React.useState(false);
-  const [editingTodoId, setEditingTodoId] = React.useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  useEffect(() => {
-    if (!todos.isLoaded && !todos.isFetching) {
-      todos.fetchPage();
+  React.useEffect(() => {
+    if (!tasks.isLoaded && !tasks.isFetching) {
+      tasks.fetchPage();
     }
-  }, [todos.isLoaded, todos.isFetching, todos]);
+  }, [tasks.isLoaded, tasks.isFetching, tasks]);
 
-  const filteredTodos = React.useMemo(() => {
-    let result = todos.all;
+  const filteredTasks = React.useMemo(() => {
+    let result = tasks.all;
 
     // Apply search filter
     if (searchQuery) {
-      result = todos.search(searchQuery);
+      result = tasks.search(searchQuery);
     }
 
     return result.sort(
@@ -40,49 +39,49 @@ const TodoList = () => {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, todos, todos.isLoaded, todos.all.length]);
+  }, [searchQuery, tasks, tasks.isLoaded, tasks.all.length]);
 
-  const handleCreateTodo = React.useCallback(() => {
-    setEditingTodoId(null);
+  const handleCreateTask = React.useCallback(() => {
+    setEditingTaskId(null);
     setShowForm(true);
   }, []);
 
-  const handleEditTodo = React.useCallback((todo: Todo) => {
-    setEditingTodoId(todo.id);
+  const handleEditTask = React.useCallback((task: Task) => {
+    setEditingTaskId(task.id);
     setShowForm(false); // Don't show the separate form
   }, []);
 
-  const handleDeleteTodo = React.useCallback(
-    async (todo: Todo) => {
-      if (window.confirm(t("Are you sure you want to delete this todo?"))) {
-        await todos.delete(todo);
+  const handleDeleteTask = React.useCallback(
+    async (task: Task) => {
+      if (window.confirm(t("Are you sure you want to delete this task?"))) {
+        await tasks.delete(task);
       }
     },
-    [todos, t]
+    [tasks, t]
   );
 
-  const handleSaveTodo = React.useCallback(() => {
+  const handleSaveTask = React.useCallback(() => {
     setShowForm(false);
-    setEditingTodoId(null);
+    setEditingTaskId(null);
   }, []);
 
   const handleCancelEdit = React.useCallback(() => {
-    setEditingTodoId(null);
+    setEditingTaskId(null);
   }, []);
 
   const handleCancelForm = React.useCallback(() => {
     setShowForm(false);
-    setEditingTodoId(null);
+    setEditingTaskId(null);
   }, []);
 
-  const stats = todos.stats;
+  const stats = tasks.stats;
 
   return (
     <Container>
       <Header>
         <HeaderTop>
           <div>
-            <Title>{t("Todos")}</Title>
+            <Title>{t("Tasks")}</Title>
             <Stats>
               {stats.active} {t("active")} • {stats.completed} {t("completed")}
               {stats.overdue > 0 && (
@@ -96,15 +95,15 @@ const TodoList = () => {
               )}
             </Stats>
           </div>
-          <Button type="button" onClick={handleCreateTodo} icon={<PlusIcon />}>
-            {t("Add Todo")}
+          <Button type="button" onClick={handleCreateTask} icon={<PlusIcon />}>
+            {t("Add Task")}
           </Button>
         </HeaderTop>
 
         <Controls>
           <SearchContainer>
             <Input
-              placeholder={t("Search todos...")}
+              placeholder={t("Search tasks...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -114,46 +113,46 @@ const TodoList = () => {
 
       {showForm && (
         <FormContainer>
-          <TodoForm
-            todo={undefined}
-            onSave={handleSaveTodo}
+          <TaskForm
+            task={undefined}
+            onSave={handleSaveTask}
             onCancel={handleCancelForm}
           />
         </FormContainer>
       )}
 
       <Content>
-        {filteredTodos.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <EmptyState>
             {searchQuery ? (
-              <Text type="secondary">{t("No todos match your search.")}</Text>
+              <Text type="secondary">{t("No tasks match your search.")}</Text>
             ) : (
               <>
-                <Text type="secondary">{t("No todos yet.")}</Text>
+                <Text type="secondary">{t("No tasks yet.")}</Text>
                 <Button
                   type="button"
-                  onClick={handleCreateTodo}
+                  onClick={handleCreateTask}
                   icon={<PlusIcon />}
                 >
-                  {t("Create your first todo")}
+                  {t("Create your first task")}
                 </Button>
               </>
             )}
           </EmptyState>
         ) : (
-          <TodosList>
-            {filteredTodos.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                isEditing={editingTodoId === todo.id}
-                onEdit={handleEditTodo}
-                onDelete={handleDeleteTodo}
-                onSave={handleSaveTodo}
+          <TasksList>
+            {filteredTasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                isEditing={editingTaskId === task.id}
+                onEdit={handleEditTask}
+                onDelete={handleDeleteTask}
+                onSave={handleSaveTask}
                 onCancel={handleCancelEdit}
               />
             ))}
-          </TodosList>
+          </TasksList>
         )}
       </Content>
     </Container>
@@ -224,9 +223,9 @@ const EmptyState = styled.div`
   height: 200px;
 `;
 
-const TodosList = styled.div`
+const TasksList = styled.div`
   display: flex;
   flex-direction: column;
 `;
 
-export default observer(TodoList);
+export default observer(TaskList);

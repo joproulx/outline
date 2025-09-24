@@ -1,23 +1,23 @@
 import Router from "koa-router";
-import SimpleTodoItem, {
-  TodoStatus,
-  TodoPriority,
-} from "../models/SimpleTodoItem";
+import SimpleTaskItem, {
+  TaskStatus,
+  TaskPriority,
+} from "../models/SimpleTaskItem";
 import auth from "@server/middlewares/authentication";
 
 const router = new Router();
 
 // Debug endpoint to verify plugin is working
-router.post("todos.info", async (ctx) => {
+router.post("tasks.info", async (ctx) => {
   ctx.body = {
     ok: true,
-    message: "Todos plugin is working",
+    message: "Tasks plugin is working",
     timestamp: new Date().toISOString(),
   };
 });
 
-// Create a new todo item
-router.post("todos.create", auth(), async (ctx) => {
+// Create a new task item
+router.post("tasks.create", auth(), async (ctx) => {
   const {
     title,
     description,
@@ -33,13 +33,13 @@ router.post("todos.create", auth(), async (ctx) => {
 
   try {
     // Convert frontend priority values to backend enum values
-    let backendPriority = TodoPriority.Medium; // default
+    let backendPriority = TaskPriority.Medium; // default
     if (priority === "low") {
-      backendPriority = TodoPriority.Low;
+      backendPriority = TaskPriority.Low;
     } else if (priority === "medium") {
-      backendPriority = TodoPriority.Medium;
+      backendPriority = TaskPriority.Medium;
     } else if (priority === "high") {
-      backendPriority = TodoPriority.High;
+      backendPriority = TaskPriority.High;
     }
 
     // Use dueDate if provided, fallback to deadline for backward compatibility
@@ -59,7 +59,7 @@ router.post("todos.create", auth(), async (ctx) => {
       }
     }
 
-    const todo = await SimpleTodoItem.create({
+    const task = await SimpleTaskItem.create({
       title,
       description: description || null,
       priority: backendPriority,
@@ -69,26 +69,26 @@ router.post("todos.create", auth(), async (ctx) => {
       collectionId: collectionId || undefined,
       createdById: user.id,
       teamId: user.teamId,
-      status: TodoStatus.Pending,
+      status: TaskStatus.Pending,
     });
 
     // Convert to frontend format
-    const convertedTodo = {
-      id: todo.id,
-      title: todo.title,
-      description: todo.description,
-      priority: todo.priority.toLowerCase(),
-      dueDate: todo.deadline?.toISOString(),
-      tags: todo.tags || [],
-      completed: todo.status === TodoStatus.Completed,
-      createdAt: todo.createdAt?.toISOString(),
-      updatedAt: todo.updatedAt?.toISOString(),
-      createdById: todo.createdById,
+    const convertedTask = {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      priority: task.priority.toLowerCase(),
+      dueDate: task.deadline?.toISOString(),
+      tags: task.tags || [],
+      completed: task.status === TaskStatus.Completed,
+      createdAt: task.createdAt?.toISOString(),
+      updatedAt: task.updatedAt?.toISOString(),
+      createdById: task.createdById,
     };
 
     ctx.body = {
       ok: true,
-      data: convertedTodo,
+      data: convertedTask,
     };
   } catch (error) {
     ctx.status = 400;
@@ -99,8 +99,8 @@ router.post("todos.create", auth(), async (ctx) => {
   }
 });
 
-// List todos
-router.post("todos.list", auth(), async (ctx) => {
+// List tasks
+router.post("tasks.list", auth(), async (ctx) => {
   try {
     const { user } = ctx.state.auth;
     const { documentId, collectionId, status } = ctx.request.body;
@@ -119,28 +119,28 @@ router.post("todos.list", auth(), async (ctx) => {
       where.status = status;
     }
 
-    const todos = await SimpleTodoItem.findAll({
+    const tasks = await SimpleTaskItem.findAll({
       where,
       order: [["createdAt", "DESC"]],
     });
 
     // Convert backend format to frontend format
-    const convertedTodos = todos.map((todo) => ({
-      id: todo.id,
-      title: todo.title,
-      description: todo.description,
-      priority: todo.priority.toLowerCase(),
-      dueDate: todo.deadline?.toISOString(),
-      tags: todo.tags || [],
-      completed: todo.status === TodoStatus.Completed,
-      createdAt: todo.createdAt?.toISOString(),
-      updatedAt: todo.updatedAt?.toISOString(),
-      createdById: todo.createdById,
+    const convertedTasks = tasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      priority: task.priority.toLowerCase(),
+      dueDate: task.deadline?.toISOString(),
+      tags: task.tags || [],
+      completed: task.status === TaskStatus.Completed,
+      createdAt: task.createdAt?.toISOString(),
+      updatedAt: task.updatedAt?.toISOString(),
+      createdById: task.createdById,
     }));
 
     ctx.body = {
       ok: true,
-      data: convertedTodos,
+      data: convertedTasks,
     };
   } catch (error) {
     ctx.status = 500;
@@ -151,8 +151,8 @@ router.post("todos.list", auth(), async (ctx) => {
   }
 });
 
-// Update todo
-router.post("todos.update", auth(), async (ctx) => {
+// Update task
+router.post("tasks.update", auth(), async (ctx) => {
   const {
     id,
     title,
@@ -167,18 +167,18 @@ router.post("todos.update", auth(), async (ctx) => {
   const { user } = ctx.state.auth;
 
   try {
-    const todo = await SimpleTodoItem.findOne({
+    const task = await SimpleTaskItem.findOne({
       where: {
         id,
         teamId: user.teamId,
       },
     });
 
-    if (!todo) {
+    if (!task) {
       ctx.status = 404;
       ctx.body = {
         ok: false,
-        error: "Todo not found",
+        error: "Task not found",
       };
       return;
     }
@@ -203,10 +203,10 @@ router.post("todos.update", auth(), async (ctx) => {
     // Convert completed boolean to status if provided
     let finalStatus = status;
     if (completed !== undefined) {
-      finalStatus = completed ? TodoStatus.Completed : TodoStatus.Pending;
+      finalStatus = completed ? TaskStatus.Completed : TaskStatus.Pending;
     }
 
-    await todo.update({
+    await task.update({
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
       ...(finalStatus !== undefined && { status: finalStatus }),
@@ -215,27 +215,27 @@ router.post("todos.update", auth(), async (ctx) => {
         deadline: parsedDeadline,
       }),
       ...(tags !== undefined && { tags }),
-      ...(finalStatus === TodoStatus.Completed && { completedAt: new Date() }),
-      ...(finalStatus !== TodoStatus.Completed && { completedAt: undefined }),
+      ...(finalStatus === TaskStatus.Completed && { completedAt: new Date() }),
+      ...(finalStatus !== TaskStatus.Completed && { completedAt: undefined }),
     });
 
     // Convert to frontend format
-    const convertedTodo = {
-      id: todo.id,
-      title: todo.title,
-      description: todo.description,
-      priority: todo.priority.toLowerCase(),
-      dueDate: todo.deadline?.toISOString(),
-      tags: todo.tags || [],
-      completed: todo.status === TodoStatus.Completed,
-      createdAt: todo.createdAt?.toISOString(),
-      updatedAt: todo.updatedAt?.toISOString(),
-      createdById: todo.createdById,
+    const convertedTask = {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      priority: task.priority.toLowerCase(),
+      dueDate: task.deadline?.toISOString(),
+      tags: task.tags || [],
+      completed: task.status === TaskStatus.Completed,
+      createdAt: task.createdAt?.toISOString(),
+      updatedAt: task.updatedAt?.toISOString(),
+      createdById: task.createdById,
     };
 
     ctx.body = {
       ok: true,
-      data: convertedTodo,
+      data: convertedTask,
     };
   } catch (error) {
     ctx.status = 400;
@@ -246,29 +246,29 @@ router.post("todos.update", auth(), async (ctx) => {
   }
 });
 
-// Delete todo
-router.post("todos.delete", auth(), async (ctx) => {
+// Delete task
+router.post("tasks.delete", auth(), async (ctx) => {
   const { id } = ctx.request.body;
   const { user } = ctx.state.auth;
 
   try {
-    const todo = await SimpleTodoItem.findOne({
+    const task = await SimpleTaskItem.findOne({
       where: {
         id,
         teamId: user.teamId,
       },
     });
 
-    if (!todo) {
+    if (!task) {
       ctx.status = 404;
       ctx.body = {
         ok: false,
-        error: "Todo not found",
+        error: "Task not found",
       };
       return;
     }
 
-    await todo.destroy();
+    await task.destroy();
 
     ctx.body = {
       ok: true,

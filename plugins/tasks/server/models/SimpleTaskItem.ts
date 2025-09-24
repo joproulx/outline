@@ -3,60 +3,37 @@ import {
   BelongsTo,
   Column,
   DataType,
-  DefaultScope,
   ForeignKey,
-  HasMany,
   Length,
   Table,
 } from "sequelize-typescript";
 import { Collection, Document, Team, User } from "@server/models";
 import ParanoidModel from "@server/models/base/ParanoidModel";
 import Fix from "@server/models/decorators/Fix";
-import TodoAssignment from "./TodoAssignment";
 
-export enum TodoStatus {
+export enum TaskStatus {
   Pending = "pending",
   InProgress = "in_progress",
   Completed = "completed",
   Cancelled = "cancelled",
 }
 
-export enum TodoPriority {
+export enum TaskPriority {
   Low = "low",
   Medium = "medium",
   High = "high",
   Urgent = "urgent",
 }
 
-@DefaultScope(() => ({
-  include: [
-    {
-      model: User,
-      as: "createdBy",
-      paranoid: false,
-    },
-    {
-      model: TodoAssignment,
-      as: "assignments",
-      include: [
-        {
-          model: User,
-          as: "user",
-          paranoid: false,
-        },
-      ],
-    },
-  ],
-}))
-@Table({ tableName: "todo_items", modelName: "todoItem" })
+@Table({ tableName: "task_items", modelName: "taskItem" })
 @Fix
-class TodoItem extends ParanoidModel<
-  InferAttributes<TodoItem>,
-  Partial<InferCreationAttributes<TodoItem>>
+class SimpleTaskItem extends ParanoidModel<
+  InferAttributes<SimpleTaskItem>,
+  Partial<InferCreationAttributes<SimpleTaskItem>>
 > {
   @Length({
     max: 255,
-    msg: "Todo title must be 255 characters or less",
+    msg: "Task title must be 255 characters or less",
   })
   @Column(DataType.STRING)
   title: string;
@@ -66,27 +43,30 @@ class TodoItem extends ParanoidModel<
 
   @Column({
     type: DataType.STRING,
-    defaultValue: TodoStatus.Pending,
+    defaultValue: TaskStatus.Pending,
     validate: {
-      isIn: [Object.values(TodoStatus)],
+      isIn: [Object.values(TaskStatus)],
     },
   })
-  status: TodoStatus;
+  status: TaskStatus;
 
   @Column({
     type: DataType.STRING,
-    defaultValue: TodoPriority.Medium,
+    defaultValue: TaskPriority.Medium,
     validate: {
-      isIn: [Object.values(TodoPriority)],
+      isIn: [Object.values(TaskPriority)],
     },
   })
-  priority: TodoPriority;
+  priority: TaskPriority;
 
   @Column(DataType.DATE)
   deadline?: Date;
 
   @Column(DataType.DATE)
   completedAt?: Date;
+
+  @Column(DataType.JSON)
+  tags?: string[];
 
   // Associations
   @BelongsTo(() => Document, "documentId")
@@ -117,37 +97,26 @@ class TodoItem extends ParanoidModel<
   @Column(DataType.UUID)
   teamId: string;
 
-  @HasMany(() => TodoAssignment, "todoId")
-  assignments: TodoAssignment[];
-
   // Computed properties
   get isOverdue(): boolean {
-    if (!this.deadline || this.status === TodoStatus.Completed) {
+    if (!this.deadline || this.status === TaskStatus.Completed) {
       return false;
     }
     return new Date() > this.deadline;
   }
 
-  get assigneeCount(): number {
-    return this.assignments?.length || 0;
-  }
-
-  get assignees(): User[] {
-    return this.assignments?.map((assignment) => assignment.user) || [];
-  }
-
   // Instance methods
-  async markCompleted(_actorId: string): Promise<void> {
-    this.status = TodoStatus.Completed;
+  async markCompleted(): Promise<void> {
+    this.status = TaskStatus.Completed;
     this.completedAt = new Date();
     await this.save();
   }
 
   async markPending(): Promise<void> {
-    this.status = TodoStatus.Pending;
+    this.status = TaskStatus.Pending;
     this.completedAt = undefined;
     await this.save();
   }
 }
 
-export default TodoItem;
+export default SimpleTaskItem;

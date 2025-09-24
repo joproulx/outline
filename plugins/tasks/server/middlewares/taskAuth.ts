@@ -2,7 +2,7 @@ import { Context, Next } from "koa";
 import { APIContext } from "@server/types";
 
 /**
- * Middleware to ensure the user is authenticated for todo operations
+ * Middleware to ensure the user is authenticated for task operations
  */
 export function requireAuth() {
   return async (ctx: Context, next: Next) => {
@@ -45,7 +45,7 @@ export function requireTeamAccess() {
       ctx.body = {
         ok: false,
         error: "team_required",
-        message: "You must be a member of a team to access todos",
+        message: "You must be a member of a team to access tasks",
       };
       return;
     }
@@ -55,9 +55,9 @@ export function requireTeamAccess() {
 }
 
 /**
- * Middleware to check if user can create todos
+ * Middleware to check if user can create tasks
  */
-export function canCreateTodos() {
+export function canCreateTasks() {
   return async (ctx: Context, next: Next) => {
     const apiCtx = ctx as APIContext;
     const user = apiCtx.state.auth?.user;
@@ -67,19 +67,19 @@ export function canCreateTodos() {
       ctx.body = {
         ok: false,
         error: "authentication_required",
-        message: "You must be logged in to create todos",
+        message: "You must be logged in to create tasks",
       };
       return;
     }
 
-    // For now, all authenticated team members can create todos
+    // For now, all authenticated team members can create tasks
     // This can be extended with more granular permissions later
     if (!user.teamId) {
       ctx.status = 403;
       ctx.body = {
         ok: false,
         error: "insufficient_permissions",
-        message: "You don't have permission to create todos",
+        message: "You don't have permission to create tasks",
       };
       return;
     }

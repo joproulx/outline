@@ -27,7 +27,7 @@ import SearchesStore from "./SearchesStore";
 import SharesStore from "./SharesStore";
 import StarsStore from "./StarsStore";
 import SubscriptionsStore from "./SubscriptionsStore";
-import TodosStore from "./TodosStore";
+import TasksStore from "./TasksStore";
 import UiStore from "./UiStore";
 import UnfurlsStore from "./UnfurlsStore";
 import UserMembershipsStore from "./UserMembershipsStore";
@@ -64,7 +64,7 @@ export default class RootStore {
   unfurls: UnfurlsStore;
   stars: StarsStore;
   subscriptions: SubscriptionsStore;
-  todos: TodosStore;
+  tasks: TasksStore;
   users: UsersStore;
   views: ViewsStore;
   fileOperations: FileOperationsStore;
@@ -95,7 +95,7 @@ export default class RootStore {
     this.registerStore(SharesStore);
     this.registerStore(StarsStore);
     this.registerStore(SubscriptionsStore);
-    this.registerStore(TodosStore);
+    this.registerStore(TasksStore);
     this.registerStore(UnfurlsStore);
     this.registerStore(UsersStore);
     this.registerStore(ViewsStore);

@@ -8,28 +8,28 @@ import Flex from "~/components/Flex";
 import Input from "~/components/Input";
 import { InputSelect } from "~/components/InputSelect";
 import Text from "~/components/Text";
-import Todo from "~/models/Todo";
+import Task from "~/models/Task";
 import useStores from "~/hooks/useStores";
 
 type Props = {
-  todo?: Todo;
-  onSave: (todo: Todo) => void;
+  task?: Task;
+  onSave: (task: Task) => void;
   onCancel: () => void;
 };
 
-const TodoForm = ({ todo, onSave, onCancel }: Props) => {
+const TaskForm = ({ task, onSave, onCancel }: Props) => {
   const { t } = useTranslation();
-  const { todos } = useStores();
+  const { tasks } = useStores();
 
-  const [title, setTitle] = React.useState(todo?.title || "");
-  const [description, setDescription] = React.useState(todo?.description || "");
+  const [title, setTitle] = React.useState(task?.title || "");
+  const [description, setDescription] = React.useState(task?.description || "");
   const [priority, setPriority] = React.useState<
     "high" | "medium" | "low" | "none"
-  >(todo?.priority || "none");
+  >(task?.priority || "none");
   const [dueDate, setDueDate] = React.useState(
-    todo?.dueDate ? todo.dueDate.split("T")[0] : ""
+    task?.dueDate ? task.dueDate.split("T")[0] : ""
   );
-  const [tags, setTags] = React.useState(todo?.tags.join(", ") || "");
+  const [tags, setTags] = React.useState(task?.tags.join(", ") || "");
   const [isLoading, setIsLoading] = React.useState(false);
 
   const priorityOptions = [
@@ -48,7 +48,7 @@ const TodoForm = ({ todo, onSave, onCancel }: Props) => {
       }
       setIsLoading(true);
       try {
-        const todoData = {
+        const taskData = {
           title: title.trim(),
           description: description.trim() || undefined,
           priority,
@@ -59,21 +59,21 @@ const TodoForm = ({ todo, onSave, onCancel }: Props) => {
             .filter(Boolean),
         };
 
-        let savedTodo: Todo;
-        if (todo) {
-          savedTodo = await todos.update(todo, todoData);
+        let savedTask: Task;
+        if (task) {
+          savedTask = await tasks.update(task, taskData);
         } else {
-          savedTodo = await todos.create(todoData);
+          savedTask = await tasks.create(taskData);
         }
 
-        onSave(savedTodo);
+        onSave(savedTask);
       } catch (_error) {
         // Handle error silently for now
       } finally {
         setIsLoading(false);
       }
     },
-    [title, description, priority, dueDate, tags, todo, todos, onSave]
+    [title, description, priority, dueDate, tags, task, tasks, onSave]
   );
 
   const isValid = title.trim().length > 0;
@@ -86,7 +86,7 @@ const TodoForm = ({ todo, onSave, onCancel }: Props) => {
           type="text"
           value={title}
           onChange={(ev) => setTitle(ev.target.value)}
-          placeholder={t("Enter todo title...")}
+          placeholder={t("Enter task title...")}
           required
           autoFocus
         />
@@ -143,9 +143,9 @@ const TodoForm = ({ todo, onSave, onCancel }: Props) => {
         <Button type="submit" disabled={!isValid || isLoading}>
           {isLoading
             ? t("Saving...")
-            : todo
-              ? t("Update Todo")
-              : t("Create Todo")}
+            : task
+              ? t("Update Task")
+              : t("Create Task")}
         </Button>
       </Actions>
     </Form>
@@ -221,4 +221,4 @@ const Actions = styled(Flex)`
   margin-top: 8px;
 `;
 
-export default observer(TodoForm);
+export default observer(TaskForm);
