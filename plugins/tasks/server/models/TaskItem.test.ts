@@ -4,7 +4,7 @@ import {
   buildTaskItem,
   buildTaskAssignment,
 } from "@server/test/factories";
-import TaskItem, { TaskStatus, TaskPriority } from "./TaskItem";
+import TaskItem, { TaskPriority } from "./TaskItem";
 
 // Import the plugin to ensure models are registered
 import "../index";
@@ -27,7 +27,6 @@ describe("TaskItem model", () => {
 
       expect(task.title).toBe("Test Task");
       expect(task.description).toBe("A test task");
-      expect(task.status).toBe("pending");
       expect(task.priority).toBe("high");
       expect(task.deadline?.toISOString()).toBe("2025-12-31T00:00:00.000Z");
       expect(task.tags).toEqual(["work", "urgent"]);
@@ -48,7 +47,6 @@ describe("TaskItem model", () => {
         description: "Finish the project by year end",
         teamId: team.id,
         createdById: user.id,
-        status: TaskStatus.InProgress,
         priority: TaskPriority.High,
         deadline: deadline,
         tags: tags,
@@ -56,7 +54,6 @@ describe("TaskItem model", () => {
 
       expect(task.title).toEqual("Complete Project");
       expect(task.description).toEqual("Finish the project by year end");
-      expect(task.status).toEqual(TaskStatus.InProgress);
       expect(task.priority).toEqual(TaskPriority.High);
       expect(task.deadline).toEqual(deadline);
       expect(task.tags).toEqual(tags);
@@ -85,7 +82,6 @@ describe("TaskItem model", () => {
         TaskItem.create({
           teamId: team.id,
           createdById: user.id,
-          status: TaskStatus.Pending,
           priority: TaskPriority.Medium,
           // Missing title
         })
@@ -102,7 +98,6 @@ describe("TaskItem model", () => {
           title: longTitle,
           teamId: team.id,
           createdById: user.id,
-          status: TaskStatus.Pending,
           priority: TaskPriority.Medium,
         })
       ).rejects.toThrow();
@@ -115,7 +110,6 @@ describe("TaskItem model", () => {
         TaskItem.create({
           title: "Test Task",
           createdById: user.id,
-          status: TaskStatus.Pending,
           priority: TaskPriority.Medium,
           // Missing teamId
         })
@@ -129,30 +123,10 @@ describe("TaskItem model", () => {
         TaskItem.create({
           title: "Test Task",
           teamId: team.id,
-          status: TaskStatus.Pending,
           priority: TaskPriority.Medium,
           // Missing createdById
         })
       ).rejects.toThrow();
-    });
-  });
-
-  describe("status enum", () => {
-    it("should accept all valid status values", async () => {
-      const team = await buildTeam();
-      const user = await buildUser({ teamId: team.id });
-
-      for (const status of Object.values(TaskStatus)) {
-        const task = await TaskItem.create({
-          title: `Task with ${status} status`,
-          teamId: team.id,
-          createdById: user.id,
-          status: status,
-          priority: TaskPriority.Medium,
-        });
-
-        expect(task.status).toEqual(status);
-      }
     });
   });
 
@@ -166,7 +140,6 @@ describe("TaskItem model", () => {
           title: `Task with ${priority} priority`,
           teamId: team.id,
           createdById: user.id,
-          status: TaskStatus.Pending,
           priority: priority,
         });
 

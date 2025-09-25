@@ -40,7 +40,6 @@ describe("TasksStore", () => {
           priority: taskData.priority,
           dueDate: taskData.dueDate,
           tags: taskData.tags,
-          completed: false,
           createdAt: "2025-01-01T00:00:00.000Z",
           updatedAt: "2025-01-01T00:00:00.000Z",
           createdById: "user-1",
@@ -74,7 +73,6 @@ describe("TasksStore", () => {
         title: "Original Title",
         description: "Original description",
         priority: "low" as const,
-        completed: false,
         createdAt: "2025-01-01T00:00:00.000Z",
         updatedAt: "2025-01-01T00:00:00.000Z",
         createdById: "user-1",
@@ -117,7 +115,6 @@ describe("TasksStore", () => {
         title: "Task to Delete",
         description: null,
         priority: "medium" as const,
-        completed: false,
         createdAt: "2025-01-01T00:00:00.000Z",
         updatedAt: "2025-01-01T00:00:00.000Z",
         createdById: "user-1",
@@ -150,7 +147,6 @@ describe("TasksStore", () => {
           title: "Task 1",
           description: null,
           priority: "medium",
-          completed: false,
           createdAt: "2025-01-01T00:00:00.000Z",
           updatedAt: "2025-01-01T00:00:00.000Z",
           createdById: "user-1",
@@ -162,7 +158,6 @@ describe("TasksStore", () => {
           title: "Task 2",
           description: "Description",
           priority: "high",
-          completed: true,
           createdAt: "2025-01-02T00:00:00.000Z",
           updatedAt: "2025-01-02T00:00:00.000Z",
           createdById: "user-1",
@@ -198,7 +193,6 @@ describe("TasksStore", () => {
         title: "Project Planning",
         description: "Plan the new project",
         priority: "high",
-        completed: false,
         createdAt: "2025-01-01T00:00:00.000Z",
         updatedAt: "2025-01-01T00:00:00.000Z",
         createdById: "user-1",
@@ -211,7 +205,6 @@ describe("TasksStore", () => {
         title: "Bug Fixes",
         description: "Fix critical bugs",
         priority: "high",
-        completed: true,
         createdAt: "2025-01-02T00:00:00.000Z",
         updatedAt: "2025-01-02T00:00:00.000Z",
         createdById: "user-1",
@@ -252,7 +245,6 @@ describe("TasksStore", () => {
         title: "Completed Task",
         description: null,
         priority: "medium",
-        completed: true,
         createdAt: "2025-01-01T00:00:00.000Z",
         updatedAt: "2025-01-01T00:00:00.000Z",
         createdById: "user-1",
@@ -265,7 +257,6 @@ describe("TasksStore", () => {
         title: "Active Task",
         description: null,
         priority: "high",
-        completed: false,
         createdAt: "2025-01-02T00:00:00.000Z",
         updatedAt: "2025-01-02T00:00:00.000Z",
         createdById: "user-1",
@@ -278,7 +269,6 @@ describe("TasksStore", () => {
         title: "Another Active Task",
         description: null,
         priority: "low",
-        completed: false,
         createdAt: "2025-01-03T00:00:00.000Z",
         updatedAt: "2025-01-03T00:00:00.000Z",
         createdById: "user-1",
@@ -291,24 +281,6 @@ describe("TasksStore", () => {
       expect(tasksStore.all).toHaveLength(3);
     });
 
-    it("should filter active tasks", () => {
-      expect(tasksStore.active).toHaveLength(2);
-      expect(tasksStore.active.every((task) => !task.completed)).toBe(true);
-    });
-
-    it("should filter completed tasks", () => {
-      expect(tasksStore.completed).toHaveLength(1);
-      expect(tasksStore.completed.every((task) => task.completed)).toBe(true);
-    });
-
-    it("should count active tasks", () => {
-      expect(tasksStore.activeCount).toBe(2);
-    });
-
-    it("should count completed tasks", () => {
-      expect(tasksStore.completedCount).toBe(1);
-    });
-
     it("should filter by priority", () => {
       expect(tasksStore.byPriority("high")).toHaveLength(1);
       expect(tasksStore.byPriority("medium")).toHaveLength(1);
@@ -319,8 +291,6 @@ describe("TasksStore", () => {
     it("should provide statistics", () => {
       const stats = tasksStore.stats;
       expect(stats.total).toBe(3);
-      expect(stats.active).toBe(2);
-      expect(stats.completed).toBe(1);
       expect(stats.high).toBe(1);
       expect(stats.medium).toBe(1);
       expect(stats.low).toBe(1);
@@ -334,7 +304,6 @@ describe("TasksStore", () => {
         title: "Task 1",
         description: null,
         priority: "medium",
-        completed: false,
         createdAt: "2025-01-01T00:00:00.000Z",
         updatedAt: "2025-01-01T00:00:00.000Z",
         createdById: "user-1",
@@ -347,7 +316,6 @@ describe("TasksStore", () => {
         title: "Task 2",
         description: null,
         priority: "high",
-        completed: true,
         createdAt: "2025-01-02T00:00:00.000Z",
         updatedAt: "2025-01-02T00:00:00.000Z",
         createdById: "user-1",

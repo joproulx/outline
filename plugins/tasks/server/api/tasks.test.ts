@@ -44,7 +44,6 @@ describe("tasks API", () => {
       expect(body.ok).toEqual(true);
       expect(body.data.title).toEqual("Test Task");
       expect(body.data.priority).toEqual("medium");
-      expect(body.data.completed).toEqual(false);
       expect(body.data.createdById).toEqual(user.id);
     });
 
@@ -72,7 +71,6 @@ describe("tasks API", () => {
       expect(body.data.priority).toEqual("high");
       expect(body.data.dueDate).toEqual("2025-12-31T00:00:00.000Z");
       expect(body.data.tags).toEqual(["project", "urgent"]);
-      expect(body.data.completed).toEqual(false);
     });
 
     it("should handle date format correctly", async () => {
@@ -192,51 +190,6 @@ describe("tasks API", () => {
       expect(body.data[1].title).toEqual("Task 1");
     });
 
-    it("should filter tasks by status", async () => {
-      const team = await buildTeam();
-      const user = await buildUser({ teamId: team.id });
-
-      // Create completed task
-      const createRes = await server.post("/api/tasks.create", {
-        body: {
-          token: user.getJwtToken(),
-          title: "Completed Task",
-        },
-      });
-      const createBody = await createRes.json();
-
-      // Mark it as completed
-      await server.post("/api/tasks.update", {
-        body: {
-          token: user.getJwtToken(),
-          id: createBody.data.id,
-          completed: true,
-        },
-      });
-
-      // Create pending task
-      await server.post("/api/tasks.create", {
-        body: {
-          token: user.getJwtToken(),
-          title: "Pending Task",
-        },
-      });
-
-      // Filter by completed status
-      const res = await server.post("/api/tasks.list", {
-        body: {
-          token: user.getJwtToken(),
-          status: "completed",
-        },
-      });
-      const body = await res.json();
-
-      expect(res.status).toEqual(200);
-      expect(body.data.length).toEqual(1);
-      expect(body.data[0].title).toEqual("Completed Task");
-      expect(body.data[0].completed).toEqual(true);
-    });
-
     it("should not return tasks from other teams", async () => {
       const team1 = await buildTeam();
       const team2 = await buildTeam();
@@ -299,33 +252,6 @@ describe("tasks API", () => {
       expect(res.status).toEqual(200);
       expect(body.ok).toEqual(true);
       expect(body.data.title).toEqual("Updated Title");
-    });
-
-    it("should update task completion status", async () => {
-      const team = await buildTeam();
-      const user = await buildUser({ teamId: team.id });
-
-      // Create task
-      const createRes = await server.post("/api/tasks.create", {
-        body: {
-          token: user.getJwtToken(),
-          title: "Task to Complete",
-        },
-      });
-      const createBody = await createRes.json();
-
-      // Mark as completed
-      const res = await server.post("/api/tasks.update", {
-        body: {
-          token: user.getJwtToken(),
-          id: createBody.data.id,
-          completed: true,
-        },
-      });
-      const body = await res.json();
-
-      expect(res.status).toEqual(200);
-      expect(body.data.completed).toEqual(true);
     });
 
     it("should update multiple fields at once", async () => {
@@ -492,6 +418,551 @@ describe("tasks API", () => {
 
       // Try to delete with user2
       const res = await server.post("/api/tasks.delete", {
+        body: {
+          token: user2.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(404);
+      expect(body.error).toEqual("Task not found");
+    });
+  });
+
+  describe("tasks.assign", () => {
+    it("should require authentication", async () => {
+      const res = await server.post("/api/tasks.assign");
+      const body = await res.json();
+
+      expect(res.status).toEqual(401);
+      expect(body).toMatchSnapshot();
+    });
+
+    it("should assign current user to task when no userId provided", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign to self
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.taskId).toEqual(createBody.data.id);
+      expect(body.data.userId).toEqual(user.id);
+      expect(body.data.assignedById).toEqual(user.id);
+      expect(body.data.user.id).toEqual(user.id);
+      expect(body.data.assignedBy.id).toEqual(user.id);
+      expect(body.data.assignedAt).toBeDefined();
+    });
+
+    it("should assign current user to task when explicitly specified", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign to self explicitly
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.userId).toEqual(user.id);
+    });
+
+    it("should prevent non-creator/non-admin from assigning task to other users", async () => {
+      const team = await buildTeam();
+      const taskCreator = await buildUser({ teamId: team.id });
+      const user1 = await buildUser({ teamId: team.id });
+      const user2 = await buildUser({ teamId: team.id });
+
+      // Create task as taskCreator
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Try to assign to user2 as user1 (neither creator nor admin)
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user1.getJwtToken(),
+          id: createBody.data.id,
+          userId: user2.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(403);
+      expect(body.ok).toEqual(false);
+      expect(body.error).toEqual(
+        "Only task creator or administrators can assign tasks to other users"
+      );
+    });
+
+    it("should allow task creator to assign task to other users", async () => {
+      const team = await buildTeam();
+      const taskCreator = await buildUser({ teamId: team.id });
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task as taskCreator
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign to user as task creator
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.userId).toEqual(user.id);
+      expect(body.data.assignedById).toEqual(taskCreator.id);
+      expect(body.data.user.id).toEqual(user.id);
+      expect(body.data.assignedBy.id).toEqual(taskCreator.id);
+    });
+
+    it("should allow admin to assign task to other users", async () => {
+      const team = await buildTeam();
+      const admin = await buildUser({ teamId: team.id, role: "admin" });
+      const taskCreator = await buildUser({ teamId: team.id });
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task as taskCreator
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign to user as admin
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: admin.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.userId).toEqual(user.id);
+      expect(body.data.assignedById).toEqual(admin.id);
+      expect(body.data.user.id).toEqual(user.id);
+      expect(body.data.assignedBy.id).toEqual(admin.id);
+    });
+
+    it("should prevent assignment to user from different team", async () => {
+      const team1 = await buildTeam();
+      const team2 = await buildTeam();
+      const admin1 = await buildUser({ teamId: team1.id, role: "admin" });
+      const user2 = await buildUser({ teamId: team2.id });
+
+      // Create task in team1
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: admin1.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Try to assign to user from team2
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: admin1.getJwtToken(),
+          id: createBody.data.id,
+          userId: user2.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(404);
+      expect(body.ok).toEqual(false);
+      expect(body.error).toEqual("Target user not found in your team");
+    });
+
+    it("should prevent double assignment", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // First assignment
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+
+      // Try to assign again
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(400);
+      expect(body.ok).toEqual(false);
+      expect(body.error).toEqual("User is already assigned to this task");
+    });
+
+    it("should return 404 for non-existent task", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: "00000000-0000-4000-8000-000000000000",
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(404);
+      expect(body.error).toEqual("Task not found");
+    });
+
+    it("should return 404 for task from different team", async () => {
+      const team1 = await buildTeam();
+      const team2 = await buildTeam();
+      const user1 = await buildUser({ teamId: team1.id });
+      const user2 = await buildUser({ teamId: team2.id });
+
+      // Create task in team1
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user1.getJwtToken(),
+          title: "Team 1 Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Try to assign from team2
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user2.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(404);
+      expect(body.error).toEqual("Task not found");
+    });
+  });
+
+  describe("tasks.unassign", () => {
+    it("should require authentication", async () => {
+      const res = await server.post("/api/tasks.unassign");
+      const body = await res.json();
+
+      expect(res.status).toEqual(401);
+      expect(body).toMatchSnapshot();
+    });
+
+    it("should unassign current user from task when no userId provided", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign first
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+
+      // Then unassign
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.deleted).toEqual(true);
+      expect(body.data.taskId).toEqual(createBody.data.id);
+      expect(body.data.userId).toEqual(user.id);
+    });
+
+    it("should unassign current user from task when explicitly specified", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign first
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+
+      // Then unassign explicitly
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.deleted).toEqual(true);
+    });
+
+    it("should prevent non-creator/non-admin from unassigning other users", async () => {
+      const team = await buildTeam();
+      const taskCreator = await buildUser({ teamId: team.id });
+      const user1 = await buildUser({ teamId: team.id });
+      const user2 = await buildUser({ teamId: team.id });
+
+      // Create task and assign user1 as task creator
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          id: createBody.data.id,
+          userId: user1.id,
+        },
+      });
+
+      // Try to unassign user1 as user2 (neither creator nor admin)
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: user2.getJwtToken(),
+          id: createBody.data.id,
+          userId: user1.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(403);
+      expect(body.ok).toEqual(false);
+      expect(body.error).toEqual(
+        "Only task creator or administrators can unassign tasks from other users"
+      );
+    });
+
+    it("should allow task creator to unassign other users", async () => {
+      const team = await buildTeam();
+      const taskCreator = await buildUser({ teamId: team.id });
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task and assign user as task creator
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+
+      // Unassign as task creator
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.deleted).toEqual(true);
+    });
+
+    it("should allow admin to unassign other users", async () => {
+      const team = await buildTeam();
+      const admin = await buildUser({ teamId: team.id, role: "admin" });
+      const taskCreator = await buildUser({ teamId: team.id });
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task as taskCreator and assign user
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: taskCreator.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+
+      // Unassign as admin
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: admin.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.deleted).toEqual(true);
+    });
+
+    it("should return 404 for non-existent assignment", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task but don't assign
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Try to unassign (no assignment exists)
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(404);
+      expect(body.ok).toEqual(false);
+      expect(body.error).toEqual("Assignment not found");
+    });
+
+    it("should return 404 for non-existent task", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      const res = await server.post("/api/tasks.unassign", {
+        body: {
+          token: user.getJwtToken(),
+          id: "00000000-0000-4000-8000-000000000000",
+        },
+      });
+      const body = await res.json();
+
+      expect(res.status).toEqual(404);
+      expect(body.error).toEqual("Task not found");
+    });
+
+    it("should return 404 for task from different team", async () => {
+      const team1 = await buildTeam();
+      const team2 = await buildTeam();
+      const user1 = await buildUser({ teamId: team1.id });
+      const user2 = await buildUser({ teamId: team2.id });
+
+      // Create task in team1
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user1.getJwtToken(),
+          title: "Team 1 Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Try to unassign from team2
+      const res = await server.post("/api/tasks.unassign", {
         body: {
           token: user2.getJwtToken(),
           id: createBody.data.id,

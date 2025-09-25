@@ -2,7 +2,7 @@ import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
-import { CheckboxIcon, ClockIcon } from "outline-icons";
+import { ClockIcon } from "outline-icons";
 import { s } from "@shared/styles";
 import Flex from "~/components/Flex";
 import Text from "~/components/Text";
@@ -74,19 +74,6 @@ const TaskItem = ({
     []
   );
 
-  const handleToggleComplete = React.useCallback(() => {
-    if (!isEditing && isMountedRef.current) {
-      // Use setTimeout to avoid blocking the click handler
-      setTimeout(async () => {
-        try {
-          await task.toggle();
-        } catch (_error) {
-          // Error will be handled by the task model's error handling
-        }
-      }, 0);
-    }
-  }, [task, isEditing]);
-
   const handleEdit = React.useCallback(() => {
     if (isMountedRef.current) {
       onEdit(task);
@@ -153,11 +140,7 @@ const TaskItem = ({
 
   if (isEditing) {
     return (
-      <Container
-        $completed={task.completed}
-        $overdue={task.isOverdue}
-        $editing={true}
-      >
+      <Container $overdue={task.isOverdue} $editing={true}>
         <EditForm>
           <FormField>
             <Label>{t("Title")}</Label>
@@ -233,20 +216,11 @@ const TaskItem = ({
   }
 
   return (
-    <Container $completed={task.completed} $overdue={task.isOverdue}>
+    <Container $overdue={task.isOverdue}>
       <Flex align="center" gap={12}>
-        <CheckboxButton
-          type="button"
-          onClick={handleToggleComplete}
-          $completed={task.completed}
-          $priority={task.priority}
-        >
-          <CheckboxIcon checked={task.completed} size={16} />
-        </CheckboxButton>
-
         <Content>
           <Header>
-            <Title $completed={task.completed}>{task.title}</Title>
+            <Title>{task.title}</Title>
             <Flex align="center" gap={8}>
               {priorityIcon}
               {task.dueDate && (
@@ -257,11 +231,7 @@ const TaskItem = ({
             </Flex>
           </Header>
 
-          {task.description && (
-            <Description $completed={task.completed}>
-              {task.description}
-            </Description>
-          )}
+          {task.description && <Description>{task.description}</Description>}
 
           {task.tags && task.tags.length > 0 && (
             <Tags>
@@ -289,7 +259,6 @@ const TaskItem = ({
 };
 
 const Container = styled.div<{
-  $completed: boolean;
   $overdue: boolean;
   $editing?: boolean;
 }>`
@@ -297,9 +266,7 @@ const Container = styled.div<{
   border: 1px solid ${s("divider")};
   border-radius: 8px;
   margin-bottom: 8px;
-  background: ${(props) =>
-    props.$completed ? s("backgroundSecondary") : s("background")};
-  opacity: ${(props) => (props.$completed ? 0.7 : 1)};
+  background: ${s("background")};
   border-left: 4px solid
     ${(props) => {
       if (props.$editing) {
@@ -308,9 +275,6 @@ const Container = styled.div<{
       if (props.$overdue) {
         return "#e74c3c";
       }
-      if (props.$completed) {
-        return "#27ae60";
-      }
       return s("divider");
     }};
 
@@ -318,46 +282,6 @@ const Container = styled.div<{
     border-color: ${s("inputBorderFocused")};
   }
 `;
-
-const CheckboxButton = styled.button<{
-  $completed: boolean;
-  $priority: string;
-}>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 2px solid
-    ${(props) => {
-      if (props.$completed) {
-        return "#27ae60";
-      }
-      switch (props.$priority) {
-        case "high":
-          return "#e74c3c";
-        case "medium":
-          return "#f39c12";
-        case "low":
-          return "#3498db";
-        default:
-          return s("inputBorder");
-      }
-    }};
-  border-radius: 4px;
-  background: ${(props) => (props.$completed ? "#27ae60" : "transparent")};
-  color: ${(props) => (props.$completed ? "white" : s("text"))};
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: ${(props) =>
-      props.$completed ? "#219a52" : s("inputBorderFocused")};
-    background: ${(props) =>
-      props.$completed ? "#219a52" : s("backgroundSecondary")};
-  }
-`;
-
 const Content = styled.div`
   flex: 1;
   min-width: 0;
@@ -370,19 +294,15 @@ const Header = styled.div`
   margin-bottom: 4px;
 `;
 
-const Title = styled(Text).attrs({ weight: "medium" })<{ $completed: boolean }>`
+const Title = styled(Text).attrs({ weight: "medium" })`
   font-size: 15px;
-  color: ${(props) => (props.$completed ? s("textTertiary") : s("text"))};
-  text-decoration: ${(props) => (props.$completed ? "line-through" : "none")};
+  color: ${s("text")};
 `;
 
-const Description = styled(Text).attrs({ type: "secondary" })<{
-  $completed: boolean;
-}>`
+const Description = styled(Text).attrs({ type: "secondary" })`
   font-size: 13px;
   margin: 4px 0;
-  color: ${(props) =>
-    props.$completed ? s("textTertiary") : s("textSecondary")};
+  color: ${s("textSecondary")};
 `;
 
 const DueDate = styled(Text).attrs({ size: "xsmall" })<{

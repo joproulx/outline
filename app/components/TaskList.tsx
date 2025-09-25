@@ -106,7 +106,7 @@ const TaskList = () => {
           <div>
             <Title>{t("Tasks")}</Title>
             <Stats>
-              {stats.active} {t("active")} • {stats.completed} {t("completed")}
+              {stats.total} {t("tasks")}
               {stats.overdue > 0 && (
                 <>
                   {" "}

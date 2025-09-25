@@ -1,5 +1,7 @@
 import Router from "koa-router";
-import TaskItem, { TaskStatus, TaskPriority } from "../models/TaskItem";
+import TaskItem, { TaskPriority } from "../models/TaskItem";
+import TaskAssignment from "../models/TaskAssignment";
+import { User } from "@server/models";
 import auth from "@server/middlewares/authentication";
 
 const router = new Router();
@@ -66,7 +68,6 @@ router.post("tasks.create", auth(), async (ctx) => {
       collectionId: collectionId || undefined,
       createdById: user.id,
       teamId: user.teamId,
-      status: TaskStatus.Pending,
     });
 
     // Convert to frontend format
@@ -77,10 +78,33 @@ router.post("tasks.create", auth(), async (ctx) => {
       priority: task.priority.toLowerCase(),
       dueDate: task.deadline?.toISOString(),
       tags: task.tags || [],
-      completed: task.status === TaskStatus.Completed,
       createdAt: task.createdAt?.toISOString(),
       updatedAt: task.updatedAt?.toISOString(),
       createdById: task.createdById,
+      assigneeCount: task.assigneeCount,
+      assignees:
+        task.assignees?.map((assignee) => ({
+          id: assignee.id,
+          name: assignee.name,
+          email: assignee.email,
+        })) || [],
+      assignments:
+        task.assignments?.map((assignment) => ({
+          id: assignment.id,
+          userId: assignment.userId,
+          assignedById: assignment.assignedById,
+          assignedAt: assignment.assignedAt?.toISOString(),
+          user: {
+            id: assignment.user.id,
+            name: assignment.user.name,
+            email: assignment.user.email,
+          },
+          assignedBy: {
+            id: assignment.assignedBy.id,
+            name: assignment.assignedBy.name,
+            email: assignment.assignedBy.email,
+          },
+        })) || [],
     };
 
     ctx.body = {
@@ -100,7 +124,7 @@ router.post("tasks.create", auth(), async (ctx) => {
 router.post("tasks.list", auth(), async (ctx) => {
   try {
     const { user } = ctx.state.auth;
-    const { documentId, collectionId, status } = ctx.request.body;
+    const { documentId, collectionId } = ctx.request.body;
 
     const where: Record<string, unknown> = {
       teamId: user.teamId,
@@ -111,9 +135,6 @@ router.post("tasks.list", auth(), async (ctx) => {
     }
     if (collectionId) {
       where.collectionId = collectionId;
-    }
-    if (status) {
-      where.status = status;
     }
 
     const tasks = await TaskItem.findAll({
@@ -129,10 +150,33 @@ router.post("tasks.list", auth(), async (ctx) => {
       priority: task.priority.toLowerCase(),
       dueDate: task.deadline?.toISOString(),
       tags: task.tags || [],
-      completed: task.status === TaskStatus.Completed,
       createdAt: task.createdAt?.toISOString(),
       updatedAt: task.updatedAt?.toISOString(),
       createdById: task.createdById,
+      assigneeCount: task.assigneeCount,
+      assignees:
+        task.assignees?.map((assignee) => ({
+          id: assignee.id,
+          name: assignee.name,
+          email: assignee.email,
+        })) || [],
+      assignments:
+        task.assignments?.map((assignment) => ({
+          id: assignment.id,
+          userId: assignment.userId,
+          assignedById: assignment.assignedById,
+          assignedAt: assignment.assignedAt?.toISOString(),
+          user: {
+            id: assignment.user.id,
+            name: assignment.user.name,
+            email: assignment.user.email,
+          },
+          assignedBy: {
+            id: assignment.assignedBy.id,
+            name: assignment.assignedBy.name,
+            email: assignment.assignedBy.email,
+          },
+        })) || [],
     }));
 
     ctx.body = {
@@ -150,17 +194,8 @@ router.post("tasks.list", auth(), async (ctx) => {
 
 // Update task
 router.post("tasks.update", auth(), async (ctx) => {
-  const {
-    id,
-    title,
-    description,
-    status,
-    priority,
-    deadline,
-    dueDate,
-    tags,
-    completed,
-  } = ctx.request.body;
+  const { id, title, description, priority, deadline, dueDate, tags } =
+    ctx.request.body;
   const { user } = ctx.state.auth;
 
   try {
@@ -197,23 +232,14 @@ router.post("tasks.update", auth(), async (ctx) => {
       }
     }
 
-    // Convert completed boolean to status if provided
-    let finalStatus = status;
-    if (completed !== undefined) {
-      finalStatus = completed ? TaskStatus.Completed : TaskStatus.Pending;
-    }
-
     await task.update({
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
-      ...(finalStatus !== undefined && { status: finalStatus }),
       ...(priority !== undefined && { priority }),
       ...(deadlineDate !== undefined && {
         deadline: parsedDeadline,
       }),
       ...(tags !== undefined && { tags }),
-      ...(finalStatus === TaskStatus.Completed && { completedAt: new Date() }),
-      ...(finalStatus !== TaskStatus.Completed && { completedAt: undefined }),
     });
 
     // Convert to frontend format
@@ -224,10 +250,33 @@ router.post("tasks.update", auth(), async (ctx) => {
       priority: task.priority.toLowerCase(),
       dueDate: task.deadline?.toISOString(),
       tags: task.tags || [],
-      completed: task.status === TaskStatus.Completed,
       createdAt: task.createdAt?.toISOString(),
       updatedAt: task.updatedAt?.toISOString(),
       createdById: task.createdById,
+      assigneeCount: task.assigneeCount,
+      assignees:
+        task.assignees?.map((assignee) => ({
+          id: assignee.id,
+          name: assignee.name,
+          email: assignee.email,
+        })) || [],
+      assignments:
+        task.assignments?.map((assignment) => ({
+          id: assignment.id,
+          userId: assignment.userId,
+          assignedById: assignment.assignedById,
+          assignedAt: assignment.assignedAt?.toISOString(),
+          user: {
+            id: assignment.user.id,
+            name: assignment.user.name,
+            email: assignment.user.email,
+          },
+          assignedBy: {
+            id: assignment.assignedBy.id,
+            name: assignment.assignedBy.name,
+            email: assignment.assignedBy.email,
+          },
+        })) || [],
     };
 
     ctx.body = {
@@ -270,6 +319,205 @@ router.post("tasks.delete", auth(), async (ctx) => {
     ctx.body = {
       ok: true,
       data: { deleted: true },
+    };
+  } catch (error) {
+    ctx.status = 400;
+    ctx.body = {
+      ok: false,
+      error: error.message,
+    };
+  }
+});
+
+// Assign user to task
+router.post("tasks.assign", auth(), async (ctx) => {
+  const { id, userId } = ctx.request.body;
+  const { user: currentUser } = ctx.state.auth;
+
+  try {
+    // Find the task and verify access
+    const task = await TaskItem.findOne({
+      where: {
+        id,
+        teamId: currentUser.teamId,
+      },
+    });
+
+    if (!task) {
+      ctx.status = 404;
+      ctx.body = {
+        ok: false,
+        error: "Task not found",
+      };
+      return;
+    }
+
+    // Determine who to assign
+    let targetUserId = userId;
+
+    // If no userId specified, assign to self
+    if (!targetUserId) {
+      targetUserId = currentUser.id;
+    } else if (targetUserId !== currentUser.id) {
+      // Only task creator or admins can assign tasks to other users
+      if (task.createdById !== currentUser.id && !currentUser.isAdmin) {
+        ctx.status = 403;
+        ctx.body = {
+          ok: false,
+          error:
+            "Only task creator or administrators can assign tasks to other users",
+        };
+        return;
+      }
+    }
+
+    // Verify target user exists and is in same team
+    if (targetUserId !== currentUser.id) {
+      const targetUser = await User.findOne({
+        where: {
+          id: targetUserId,
+          teamId: currentUser.teamId,
+        },
+      });
+
+      if (!targetUser) {
+        ctx.status = 404;
+        ctx.body = {
+          ok: false,
+          error: "Target user not found in your team",
+        };
+        return;
+      }
+    }
+
+    // Check if already assigned
+    const existingAssignment = await TaskAssignment.findOne({
+      where: {
+        taskId: id,
+        userId: targetUserId,
+      },
+    });
+
+    if (existingAssignment) {
+      ctx.status = 400;
+      ctx.body = {
+        ok: false,
+        error: "User is already assigned to this task",
+      };
+      return;
+    }
+
+    // Create assignment
+    const assignment = await TaskAssignment.createAssignment(
+      id,
+      targetUserId,
+      currentUser.id
+    );
+
+    // Load the assignment with user data for response
+    const assignmentWithUser = await TaskAssignment.findByPk(assignment.id);
+
+    ctx.body = {
+      ok: true,
+      data: {
+        id: assignmentWithUser.id,
+        taskId: assignmentWithUser.taskId,
+        userId: assignmentWithUser.userId,
+        assignedById: assignmentWithUser.assignedById,
+        assignedAt: assignmentWithUser.assignedAt?.toISOString(),
+        user: {
+          id: assignmentWithUser.user.id,
+          name: assignmentWithUser.user.name,
+          email: assignmentWithUser.user.email,
+        },
+        assignedBy: {
+          id: assignmentWithUser.assignedBy.id,
+          name: assignmentWithUser.assignedBy.name,
+          email: assignmentWithUser.assignedBy.email,
+        },
+      },
+    };
+  } catch (error) {
+    ctx.status = 400;
+    ctx.body = {
+      ok: false,
+      error: error.message,
+    };
+  }
+});
+
+// Unassign user from task
+router.post("tasks.unassign", auth(), async (ctx) => {
+  const { id, userId } = ctx.request.body;
+  const { user: currentUser } = ctx.state.auth;
+
+  try {
+    // Find the task and verify access
+    const task = await TaskItem.findOne({
+      where: {
+        id,
+        teamId: currentUser.teamId,
+      },
+    });
+
+    if (!task) {
+      ctx.status = 404;
+      ctx.body = {
+        ok: false,
+        error: "Task not found",
+      };
+      return;
+    }
+
+    // Determine who to unassign
+    let targetUserId = userId;
+
+    // If no userId specified, unassign self
+    if (!targetUserId) {
+      targetUserId = currentUser.id;
+    } else if (targetUserId !== currentUser.id) {
+      // Only task creator or admins can unassign tasks from other users
+      if (task.createdById !== currentUser.id && !currentUser.isAdmin) {
+        ctx.status = 403;
+        ctx.body = {
+          ok: false,
+          error:
+            "Only task creator or administrators can unassign tasks from other users",
+        };
+        return;
+      }
+    }
+
+    // Check if assignment exists
+    const assignment = await TaskAssignment.findOne({
+      where: {
+        taskId: id,
+        userId: targetUserId,
+      },
+    });
+
+    if (!assignment) {
+      ctx.status = 404;
+      ctx.body = {
+        ok: false,
+        error: "Assignment not found",
+      };
+      return;
+    }
+
+    // Remove assignment
+    const deletedCount = await TaskAssignment.removeAssignment(
+      id,
+      targetUserId
+    );
+
+    ctx.body = {
+      ok: true,
+      data: {
+        deleted: deletedCount > 0,
+        taskId: id,
+        userId: targetUserId,
+      },
     };
   } catch (error) {
     ctx.status = 400;

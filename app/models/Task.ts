@@ -1,4 +1,4 @@
-import { action, computed, observable } from "mobx";
+import { computed, observable } from "mobx";
 import User from "~/models/User";
 import Model from "./base/Model";
 import Field from "./decorators/Field";
@@ -20,13 +20,6 @@ class Task extends Model {
   @Field
   @observable
   description: string | null;
-
-  /**
-   * Whether the task is completed
-   */
-  @Field
-  @observable
-  completed: boolean;
 
   /**
    * Priority level (high, medium, low, none)
@@ -61,60 +54,11 @@ class Task extends Model {
   createdById: string;
 
   /**
-   * Mark this task as completed
-   */
-  @action
-  async complete(): Promise<void> {
-    if (this.completed) {
-      return;
-    }
-
-    this.completed = true;
-    // Update through the store to make proper API call
-    const store = this.store as unknown;
-    if (store && typeof store === "object" && "update" in store) {
-      await (store as any).update(this, { completed: true });
-    }
-  }
-
-  /**
-   * Mark this task as incomplete
-   */
-  @action
-  async uncomplete(): Promise<void> {
-    if (!this.completed) {
-      return;
-    }
-
-    this.completed = false;
-    // Update through the store to make proper API call
-    const store = this.store as unknown;
-    if (store && typeof store === "object" && "update" in store) {
-      await (store as any).update(this, { completed: false });
-    }
-  }
-
-  /**
-   * Toggle the completion status
-   */
-  @action
-  async toggle(): Promise<void> {
-    const newCompleted = !this.completed;
-    this.completed = newCompleted;
-
-    // Update through the store to make proper API call
-    const store = this.store as unknown;
-    if (store && typeof store === "object" && "update" in store) {
-      await (store as any).update(this, { completed: newCompleted });
-    }
-  }
-
-  /**
-   * Whether this task is overdue (has a due date in the past and is not completed)
+   * Whether this task is overdue (has a due date in the past)
    */
   @computed
   get isOverdue(): boolean {
-    if (!this.dueDate || this.completed) {
+    if (!this.dueDate) {
       return false;
     }
 

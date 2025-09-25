@@ -18,22 +18,6 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
-   * Get all active (incomplete) tasks
-   */
-  @computed
-  get active(): Task[] {
-    return this.filter((task: Task) => !task.completed);
-  }
-
-  /**
-   * Get all completed tasks
-   */
-  @computed
-  get completed(): Task[] {
-    return this.filter((task: Task) => task.completed);
-  }
-
-  /**
    * Get tasks by priority level
    */
   byPriority(priority: "high" | "medium" | "low" | "none"): Task[] {
@@ -41,7 +25,7 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
-   * Get overdue tasks (past due date and not completed)
+   * Get overdue tasks (past due date)
    */
   @computed
   get overdue(): Task[] {
@@ -107,22 +91,6 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
-   * Get count of active tasks
-   */
-  @computed
-  get activeCount(): number {
-    return this.active.length;
-  }
-
-  /**
-   * Get count of completed tasks
-   */
-  @computed
-  get completedCount(): number {
-    return this.completed.length;
-  }
-
-  /**
    * Create a new task
    */
   @action
@@ -162,7 +130,6 @@ export default class TasksStore extends Store<Task> {
       priority: "high" | "medium" | "low" | "none";
       dueDate: string | null;
       tags: string[];
-      completed: boolean;
     }>
   ): Promise<Task> {
     try {
@@ -195,24 +162,6 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
-   * Mark all active tasks as completed
-   */
-  @action
-  async completeAll(): Promise<void> {
-    const activeTasks = this.active;
-    await Promise.all(activeTasks.map((task) => task.complete()));
-  }
-
-  /**
-   * Delete all completed tasks
-   */
-  @action
-  async deleteCompleted(): Promise<void> {
-    const completedTasks = this.completed;
-    await Promise.all(completedTasks.map((task) => this.delete(task)));
-  }
-
-  /**
    * Get all unique tags used across tasks
    */
   @computed
@@ -231,8 +180,6 @@ export default class TasksStore extends Store<Task> {
   get stats() {
     return {
       total: this.data.size,
-      active: this.activeCount,
-      completed: this.completedCount,
       overdue: this.overdue.length,
       dueToday: this.dueToday.length,
       high: this.byPriority("high").length,

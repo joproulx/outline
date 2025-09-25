@@ -1,5 +1,14 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`tasks API tasks.assign should require authentication 1`] = `
+{
+  "error": "authentication_required",
+  "message": "Authentication required",
+  "ok": false,
+  "status": 401,
+}
+`;
+
 exports[`tasks API tasks.create should require authentication 1`] = `
 {
   "error": "authentication_required",
@@ -19,6 +28,15 @@ exports[`tasks API tasks.delete should require authentication 1`] = `
 `;
 
 exports[`tasks API tasks.list should require authentication 1`] = `
+{
+  "error": "authentication_required",
+  "message": "Authentication required",
+  "ok": false,
+  "status": 401,
+}
+`;
+
+exports[`tasks API tasks.unassign should require authentication 1`] = `
 {
   "error": "authentication_required",
   "message": "Authentication required",

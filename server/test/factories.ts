@@ -54,7 +54,6 @@ import AttachmentHelper from "@server/models/helpers/AttachmentHelper";
 import { hash } from "@server/utils/crypto";
 import { OAuthInterface } from "@server/utils/oauth/OAuthInterface";
 import TaskItem, {
-  TaskStatus,
   TaskPriority,
 } from "../../plugins/tasks/server/models/TaskItem";
 import TaskAssignment from "../../plugins/tasks/server/models/TaskAssignment";
@@ -877,7 +876,6 @@ export async function buildTaskItem(overrides: Partial<TaskItem> = {}) {
   return TaskItem.create({
     title: faker.lorem.sentence(),
     description: faker.lorem.paragraph(),
-    status: faker.helpers.arrayElement(Object.values(TaskStatus)),
     priority: faker.helpers.arrayElement(Object.values(TaskPriority)),
     deadline: faker.date.future(),
     tags: [faker.lorem.word(), faker.lorem.word()],

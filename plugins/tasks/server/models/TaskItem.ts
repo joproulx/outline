@@ -16,13 +16,6 @@ import { type HookContext } from "@server/models/base/Model";
 import Fix from "@server/models/decorators/Fix";
 import TaskAssignment from "./TaskAssignment";
 
-export enum TaskStatus {
-  Pending = "pending",
-  InProgress = "in_progress",
-  Completed = "completed",
-  Cancelled = "cancelled",
-}
-
 export enum TaskPriority {
   Low = "low",
   Medium = "medium",
@@ -65,15 +58,6 @@ class TaskItem extends ParanoidModel<
 
   @Column(DataType.TEXT)
   description?: string;
-
-  @Column({
-    type: DataType.STRING,
-    defaultValue: TaskStatus.Pending,
-    validate: {
-      isIn: [Object.values(TaskStatus)],
-    },
-  })
-  status: TaskStatus;
 
   @Column({
     type: DataType.STRING,
@@ -127,7 +111,7 @@ class TaskItem extends ParanoidModel<
 
   // Computed properties
   get isOverdue(): boolean {
-    if (!this.deadline || this.status === TaskStatus.Completed) {
+    if (!this.deadline) {
       return false;
     }
     return new Date() > this.deadline;
@@ -139,19 +123,6 @@ class TaskItem extends ParanoidModel<
 
   get assignees(): User[] {
     return this.assignments?.map((assignment) => assignment.user) || [];
-  }
-
-  // Instance methods
-  async markCompleted(_actorId: string): Promise<void> {
-    this.status = TaskStatus.Completed;
-    this.completedAt = new Date();
-    await this.save();
-  }
-
-  async markPending(): Promise<void> {
-    this.status = TaskStatus.Pending;
-    this.completedAt = undefined;
-    await this.save();
   }
 
   // hooks
