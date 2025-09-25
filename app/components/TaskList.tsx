@@ -12,6 +12,7 @@ import TaskItem from "~/components/TaskItem";
 import Task from "~/models/Task";
 import useStores from "~/hooks/useStores";
 import useCurrentUser from "~/hooks/useCurrentUser";
+import Logger from "~/utils/Logger";
 
 type TaskFilter =
   | "all"
@@ -42,12 +43,27 @@ const TaskList = () => {
   }, [searchQuery]);
 
   React.useEffect(() => {
+    Logger.info("store", "TaskList useEffect: checking if need to fetch", {
+      tasksIsLoaded: tasks.isLoaded,
+      tasksIsFetching: tasks.isFetching,
+      tasksDataSize: tasks.data.size,
+    });
+
     if (!tasks.isLoaded && !tasks.isFetching) {
+      Logger.info("store", "TaskList useEffect: calling fetchPage");
       tasks.fetchPage();
     }
   }, [tasks.isLoaded, tasks.isFetching, tasks]);
 
   const filteredTasks = React.useMemo(() => {
+    Logger.info("store", "TaskList filtering tasks", {
+      activeFilter,
+      tasksIsLoaded: tasks.isLoaded,
+      tasksDataSize: tasks.data.size,
+      tasksAllLength: tasks.all.length,
+      tasksUnassignedLength: tasks.unassigned.length,
+    });
+
     let result = tasks.all;
 
     // Apply filter
@@ -73,6 +89,11 @@ const TaskList = () => {
         break;
     }
 
+    Logger.info("store", "TaskList filter result", {
+      activeFilter,
+      resultLength: result.length,
+    });
+
     // Apply search filter with debounced search
     if (debouncedSearchQuery.trim()) {
       const query = debouncedSearchQuery.trim().toLowerCase();
@@ -90,7 +111,14 @@ const TaskList = () => {
     );
 
     return sortedResult;
-  }, [activeFilter, debouncedSearchQuery, tasks, currentUser.id]);
+  }, [
+    activeFilter,
+    debouncedSearchQuery,
+    tasks,
+    tasks.isLoaded,
+    tasks.data.size,
+    currentUser.id,
+  ]);
 
   const handleCreateTask = React.useCallback(() => {
     setEditingTaskId(null);

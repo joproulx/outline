@@ -1,6 +1,7 @@
 import { action, computed, runInAction } from "mobx";
 import Task from "~/models/Task";
 import { client } from "~/utils/ApiClient";
+import Logger from "~/utils/Logger";
 import RootStore from "./RootStore";
 import Store, { type FetchPageParams } from "./base/Store";
 
@@ -14,7 +15,15 @@ export default class TasksStore extends Store<Task> {
    */
   @computed
   get all(): Task[] {
-    return this.orderedData.slice();
+    const result = this.filter(() => true);
+    Logger.info("store", "TasksStore.all called", {
+      isLoaded: this.isLoaded,
+      isFetching: this.isFetching,
+      dataSize: this.data.size,
+      orderedDataLength: this.orderedData.length,
+      resultLength: result.length,
+    });
+    return result;
   }
 
   /**
@@ -54,7 +63,12 @@ export default class TasksStore extends Store<Task> {
    */
   @computed
   get assigned(): Task[] {
-    return this.filter((task: Task) => task.isAssigned);
+    const result = this.filter((task: Task) => task.isAssigned);
+    Logger.info("store", "TasksStore.assigned called", {
+      totalTasks: this.data.size,
+      assignedTasks: result.length,
+    });
+    return result;
   }
 
   /**
@@ -62,7 +76,12 @@ export default class TasksStore extends Store<Task> {
    */
   @computed
   get unassigned(): Task[] {
-    return this.filter((task: Task) => !task.isAssigned);
+    const result = this.filter((task: Task) => !task.isAssigned);
+    Logger.info("store", "TasksStore.unassigned called", {
+      totalTasks: this.data.size,
+      unassignedTasks: result.length,
+    });
+    return result;
   }
 
   /**
