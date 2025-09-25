@@ -3,6 +3,7 @@ import TaskItem, { TaskPriority } from "../models/TaskItem";
 import TaskAssignment from "../models/TaskAssignment";
 import { User } from "@server/models";
 import auth from "@server/middlewares/authentication";
+import Logger from "@server/logging/Logger";
 
 const router = new Router();
 
@@ -31,6 +32,14 @@ router.post("tasks.create", auth(), async (ctx) => {
   const { user } = ctx.state.auth;
 
   try {
+    Logger.info("task", `Creating new task: ${title}`, {
+      userId: user.id,
+      teamId: user.teamId,
+      priority,
+      documentId,
+      collectionId,
+    });
+
     // Convert frontend priority values to backend enum values
     let backendPriority = TaskPriority.Medium; // default
     if (priority === "low") {
@@ -112,6 +121,18 @@ router.post("tasks.create", auth(), async (ctx) => {
       data: convertedTask,
     };
   } catch (error) {
+    Logger.error("Failed to create task", error, {
+      userId: ctx.state.auth?.user?.id,
+      title,
+      description,
+      priority,
+      dueDate,
+      deadline,
+      tags,
+      documentId,
+      collectionId,
+    });
+
     ctx.status = 400;
     ctx.body = {
       ok: false,
@@ -184,6 +205,12 @@ router.post("tasks.list", auth(), async (ctx) => {
       data: convertedTasks,
     };
   } catch (error) {
+    Logger.error("Failed to list tasks", error, {
+      userId: ctx.state.auth?.user?.id,
+      documentId: ctx.request.body?.documentId,
+      collectionId: ctx.request.body?.collectionId,
+    });
+
     ctx.status = 500;
     ctx.body = {
       ok: false,
@@ -441,6 +468,13 @@ router.post("tasks.assign", auth(), async (ctx) => {
       throw new Error("Assignment assignedBy not found");
     }
 
+    Logger.info("task", `Task assigned successfully`, {
+      taskId: id,
+      assignedToUserId: targetUserId,
+      assignedByUserId: currentUser.id,
+      teamId: currentUser.teamId,
+    });
+
     // Reload the task with updated assignment data
     const updatedTask = await TaskItem.findByPk(id, {
       include: [
@@ -498,6 +532,13 @@ router.post("tasks.assign", auth(), async (ctx) => {
       },
     };
   } catch (error) {
+    Logger.error("Failed to assign task", error, {
+      userId: ctx.state.auth?.user?.id,
+      taskId: id,
+      targetUserId: userId,
+      teamId: ctx.state.auth?.user?.teamId,
+    });
+
     ctx.status = 400;
     ctx.body = {
       ok: false,
