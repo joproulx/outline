@@ -74,6 +74,14 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
+   * Get count of tasks assigned to current user (for UI counters)
+   */
+  @computed
+  get activeCount(): number {
+    return this.assignedToMe.length;
+  }
+
+  /**
    * Get tasks by assignee
    */
   byAssignee(userId: string): Task[] {

@@ -4,6 +4,22 @@ import Model from "./base/Model";
 import Field from "./decorators/Field";
 import Relation from "./decorators/Relation";
 
+// Assignment-related types
+export interface TaskAssignee {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface TaskAssignment {
+  id: string;
+  userId: string;
+  assignedById: string;
+  assignedAt: string;
+  user: TaskAssignee;
+  assignedBy: TaskAssignee;
+}
+
 class Task extends Model {
   static modelName = "Task";
 
@@ -52,6 +68,27 @@ class Task extends Model {
    * The ID of the user who created this task
    */
   createdById: string;
+
+  /**
+   * Number of users assigned to this task
+   */
+  @Field
+  @observable
+  assigneeCount: number = 0;
+
+  /**
+   * Array of assigned users (simplified format)
+   */
+  @Field
+  @observable
+  assignees: TaskAssignee[] = [];
+
+  /**
+   * Full assignment details with metadata
+   */
+  @Field
+  @observable
+  assignments: TaskAssignment[] = [];
 
   /**
    * Whether this task is overdue (has a due date in the past)
@@ -168,6 +205,46 @@ class Task extends Model {
     }
 
     return dueUTC.toLocaleDateString();
+  }
+
+  /**
+   * Whether this task is assigned to any users
+   */
+  @computed
+  get isAssigned(): boolean {
+    return this.assigneeCount > 0;
+  }
+
+  /**
+   * Whether this task is assigned to the current user
+   */
+  @computed
+  get isAssignedToMe(): boolean {
+    // This will need access to current user from store context
+    // For now return false, will be enhanced when we have store context
+    return false;
+  }
+
+  /**
+   * Get assignment status summary
+   */
+  @computed
+  get assignmentSummary(): string {
+    if (this.assigneeCount === 0) {
+      return "Unassigned";
+    }
+    if (this.assigneeCount === 1) {
+      return `Assigned to ${this.assignees[0]?.name || "1 person"}`;
+    }
+    return `Assigned to ${this.assigneeCount} people`;
+  }
+
+  /**
+   * Get the list of assignee names
+   */
+  @computed
+  get assigneeNames(): string[] {
+    return this.assignees.map((assignee) => assignee.name);
   }
 }
 

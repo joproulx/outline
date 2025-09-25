@@ -167,7 +167,9 @@ describe("TasksStore", () => {
       ];
 
       const mockResponse = {
-        data: mockTasks,
+        data: {
+          data: mockTasks,
+        },
         policies: [],
       };
 
@@ -336,6 +338,239 @@ describe("TasksStore", () => {
       const tasksWithProject = tasksStore.withTags(["project"]);
       expect(tasksWithProject).toHaveLength(1);
       expect(tasksWithProject[0].title).toBe("Task 1");
+    });
+  });
+
+  describe("Assignment methods", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockTask: any;
+
+    beforeEach(() => {
+      // Create a task with assignment data
+      mockTask = tasksStore.add({
+        id: "task-1",
+        title: "Test Task",
+        assigneeCount: 0,
+        assignees: [],
+        assignments: [],
+      });
+    });
+
+    describe("assign", () => {
+      it("should successfully assign a user to a task", async () => {
+        const assignedTaskData = {
+          data: {
+            id: "task-1",
+            title: "Test Task",
+            assigneeCount: 1,
+            assignees: [
+              { id: "user-1", name: "User One", email: "user1@example.com" },
+            ],
+            assignments: [
+              {
+                id: "assignment-1",
+                userId: "user-1",
+                assignedById: "current-user",
+                assignedAt: "2025-01-01T00:00:00.000Z",
+                user: {
+                  id: "user-1",
+                  name: "User One",
+                  email: "user1@example.com",
+                },
+                assignedBy: {
+                  id: "current-user",
+                  name: "Current User",
+                  email: "current@example.com",
+                },
+              },
+            ],
+          },
+        };
+
+        mockClient.post.mockResolvedValueOnce(assignedTaskData);
+
+        const result = await tasksStore.assign(mockTask, "user-1");
+
+        expect(mockClient.post).toHaveBeenCalledWith("/tasks.assign", {
+          id: "task-1",
+          userId: "user-1",
+        });
+
+        expect(result).toBe(mockTask);
+        expect(mockTask.assigneeCount).toBe(1);
+        expect(mockTask.assignees).toHaveLength(1);
+        expect(mockTask.assignees[0].id).toBe("user-1");
+        expect(mockTask.assignments).toHaveLength(1);
+      });
+
+      it("should handle API errors gracefully", async () => {
+        mockClient.post.mockRejectedValueOnce(new Error("API Error"));
+
+        await expect(tasksStore.assign(mockTask, "user-1")).rejects.toThrow(
+          "Failed to assign task"
+        );
+
+        expect(mockClient.post).toHaveBeenCalledWith("/tasks.assign", {
+          id: "task-1",
+          userId: "user-1",
+        });
+      });
+
+      it("should handle invalid API response", async () => {
+        mockClient.post.mockResolvedValueOnce({
+          data: null,
+        });
+
+        await expect(tasksStore.assign(mockTask, "user-1")).rejects.toThrow(
+          "Failed to assign task"
+        );
+      });
+    });
+
+    describe("unassign", () => {
+      beforeEach(() => {
+        // Set up a task with existing assignment
+        Object.assign(mockTask, {
+          assigneeCount: 1,
+          assignees: [
+            { id: "user-1", name: "User One", email: "user1@example.com" },
+          ],
+          assignments: [
+            {
+              id: "assignment-1",
+              userId: "user-1",
+              assignedById: "current-user",
+              assignedAt: "2025-01-01T00:00:00.000Z",
+              user: {
+                id: "user-1",
+                name: "User One",
+                email: "user1@example.com",
+              },
+              assignedBy: {
+                id: "current-user",
+                name: "Current User",
+                email: "current@example.com",
+              },
+            },
+          ],
+        });
+      });
+
+      it("should successfully unassign a user from a task", async () => {
+        const unassignedTaskData = {
+          data: {
+            id: "task-1",
+            title: "Test Task",
+            assigneeCount: 0,
+            assignees: [],
+            assignments: [],
+          },
+        };
+
+        mockClient.post.mockResolvedValueOnce(unassignedTaskData);
+
+        const result = await tasksStore.unassign(mockTask, "user-1");
+
+        expect(mockClient.post).toHaveBeenCalledWith("/tasks.unassign", {
+          id: "task-1",
+          userId: "user-1",
+        });
+
+        expect(result).toBe(mockTask);
+        expect(mockTask.assigneeCount).toBe(0);
+        expect(mockTask.assignees).toHaveLength(0);
+        expect(mockTask.assignments).toHaveLength(0);
+      });
+
+      it("should handle API errors gracefully", async () => {
+        mockClient.post.mockRejectedValueOnce(new Error("API Error"));
+
+        await expect(tasksStore.unassign(mockTask, "user-1")).rejects.toThrow(
+          "Failed to unassign task"
+        );
+
+        expect(mockClient.post).toHaveBeenCalledWith("/tasks.unassign", {
+          id: "task-1",
+          userId: "user-1",
+        });
+      });
+    });
+  });
+
+  describe("Assignment filtering methods", () => {
+    beforeEach(() => {
+      // Clear existing data
+      tasksStore.clear();
+
+      // Add tasks with different assignment states
+      tasksStore.add({
+        id: "assigned-task",
+        title: "Assigned Task",
+        assigneeCount: 1,
+        assignees: [
+          { id: "other-user", name: "Other User", email: "other@example.com" },
+        ],
+        assignments: [],
+      });
+
+      tasksStore.add({
+        id: "unassigned-task",
+        title: "Unassigned Task",
+        assigneeCount: 0,
+        assignees: [],
+        assignments: [],
+      });
+
+      tasksStore.add({
+        id: "my-task",
+        title: "My Task",
+        assigneeCount: 1,
+        assignees: [
+          {
+            id: "current-user-id",
+            name: "Current User",
+            email: "current@example.com",
+          },
+        ],
+        assignments: [],
+      });
+    });
+
+    it("should filter assigned tasks correctly", () => {
+      const assignedTasks = tasksStore.assigned;
+
+      expect(assignedTasks).toHaveLength(2);
+      expect(assignedTasks.map((t) => t.id)).toContain("assigned-task");
+      expect(assignedTasks.map((t) => t.id)).toContain("my-task");
+      expect(assignedTasks.map((t) => t.id)).not.toContain("unassigned-task");
+    });
+
+    it("should filter unassigned tasks correctly", () => {
+      const unassignedTasks = tasksStore.unassigned;
+
+      expect(unassignedTasks).toHaveLength(1);
+      expect(unassignedTasks[0].id).toBe("unassigned-task");
+    });
+
+    it("should filter tasks by assignee correctly", () => {
+      const tasksForOtherUser = tasksStore.byAssignee("other-user");
+
+      expect(tasksForOtherUser).toHaveLength(1);
+      expect(tasksForOtherUser[0].id).toBe("assigned-task");
+
+      const tasksForCurrentUser = tasksStore.byAssignee("current-user-id");
+
+      expect(tasksForCurrentUser).toHaveLength(1);
+      expect(tasksForCurrentUser[0].id).toBe("my-task");
+    });
+
+    it("should include assignment stats", () => {
+      const stats = tasksStore.stats;
+
+      expect(stats.total).toBe(3);
+      expect(stats.assigned).toBe(2);
+      expect(stats.unassigned).toBe(1);
+      expect(stats.assignedToMe).toBe(0); // This would need current user context
     });
   });
 });
