@@ -16,3 +16,6 @@ data/*
 *.cert
 *.crt
 *.csr
+# Playwright test results
+playwright-report/
+test-results/
