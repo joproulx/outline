@@ -50,6 +50,39 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
+   * Get assigned tasks
+   */
+  @computed
+  get assigned(): Task[] {
+    return this.filter((task: Task) => task.isAssigned);
+  }
+
+  /**
+   * Get unassigned tasks
+   */
+  @computed
+  get unassigned(): Task[] {
+    return this.filter((task: Task) => !task.isAssigned);
+  }
+
+  /**
+   * Get tasks assigned to current user
+   */
+  @computed
+  get assignedToMe(): Task[] {
+    return this.filter((task: Task) => task.isAssignedToMe);
+  }
+
+  /**
+   * Get tasks by assignee
+   */
+  byAssignee(userId: string): Task[] {
+    return this.filter((task: Task) =>
+      task.assignees.some((assignee) => assignee.id === userId)
+    );
+  }
+
+  /**
    * Search tasks by title or description
    */
   search(query: string): Task[] {
@@ -65,30 +98,34 @@ export default class TasksStore extends Store<Task> {
   /**
    * Override fetchPage to handle custom API response format
    */
-  async fetchPage(params?: FetchPageParams): Promise<Task[]> {
+  @action
+  fetchPage = async (params?: FetchPageParams): Promise<Task[]> => {
     this.isFetching = true;
 
     try {
       const res = await client.post("/tasks.list", params);
-      const tasks = res.data?.data || [];
+      const tasks = res.data || []; // Fixed: res.data is the array, not res.data.data
 
       runInAction(() => {
         if (Array.isArray(tasks)) {
           this.addPolicies(res.policies);
-          tasks.forEach((task) => this.add(task));
+          tasks.forEach((task) => {
+            this.add(task);
+          });
           this.isLoaded = true;
         }
       });
 
       return Array.isArray(tasks) ? tasks : [];
     } catch (_error) {
+      // Error already logged by the client
       return [];
     } finally {
       runInAction(() => {
         this.isFetching = false;
       });
     }
-  }
+  };
 
   /**
    * Create a new task
@@ -162,6 +199,64 @@ export default class TasksStore extends Store<Task> {
   }
 
   /**
+   * Assign a user to a task
+   */
+  @action
+  async assign(task: Task, userId: string): Promise<Task> {
+    try {
+      const res = await client.post("/tasks.assign", {
+        id: task.id,
+        userId: userId,
+      });
+
+      const taskData = res.data?.data || res.data;
+
+      if (taskData && taskData.id) {
+        // Update the task with new assignment data
+        Object.assign(task, {
+          assigneeCount: taskData.assigneeCount,
+          assignees: taskData.assignees,
+          assignments: taskData.assignments,
+        });
+        return task;
+      }
+
+      throw new Error("Failed to assign task - no valid data returned");
+    } catch (_error) {
+      throw new Error("Failed to assign task");
+    }
+  }
+
+  /**
+   * Unassign a user from a task
+   */
+  @action
+  async unassign(task: Task, userId: string): Promise<Task> {
+    try {
+      const res = await client.post("/tasks.unassign", {
+        id: task.id,
+        userId: userId,
+      });
+
+      const taskData = res.data?.data || res.data;
+
+      if (taskData && taskData.id) {
+        // Update the task with new assignment data
+        Object.assign(task, {
+          assigneeCount: taskData.assigneeCount,
+          assignees: taskData.assignees,
+          assignments: taskData.assignments,
+        });
+        return task;
+      }
+
+      throw new Error("Failed to unassign task - no valid data returned");
+    } catch (_error) {
+      throw new Error("Failed to unassign task");
+    }
+  }
+
+  /**
    * Get all unique tags used across tasks
    */
   @computed
@@ -185,6 +280,9 @@ export default class TasksStore extends Store<Task> {
       high: this.byPriority("high").length,
       medium: this.byPriority("medium").length,
       low: this.byPriority("low").length,
+      assigned: this.assigned.length,
+      unassigned: this.unassigned.length,
+      assignedToMe: this.assignedToMe.length,
     };
   }
 }

@@ -9,6 +9,7 @@ import Text from "~/components/Text";
 import Button from "~/components/Button";
 import Input from "~/components/Input";
 import { InputSelect } from "~/components/InputSelect";
+import TaskAssignmentUI from "~/components/TaskAssignmentUI";
 import Task from "~/models/Task";
 import useStores from "~/hooks/useStores";
 
@@ -198,6 +199,11 @@ const TaskItem = ({
             />
           </FormField>
 
+          <FormField>
+            <Label>{t("Assignment")}</Label>
+            <TaskAssignmentUI task={task} compact={false} showControls={true} />
+          </FormField>
+
           <Actions>
             <Button type="button" onClick={handleCancel} neutral>
               {t("Cancel")}
@@ -243,6 +249,10 @@ const TaskItem = ({
               ))}
             </Tags>
           )}
+
+          <AssignmentSection>
+            <TaskAssignmentUI task={task} compact={true} showControls={false} />
+          </AssignmentSection>
         </Content>
 
         <Actions>
@@ -333,6 +343,12 @@ const Tags = styled.div`
 
 const Tag = styled.span`
   color: ${s("textSecondary")};
+`;
+
+const AssignmentSection = styled.div`
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid ${s("divider")};
 `;
 
 const Actions = styled.div`

@@ -463,12 +463,14 @@ describe("tasks API", () => {
 
       expect(res.status).toEqual(200);
       expect(body.ok).toEqual(true);
-      expect(body.data.taskId).toEqual(createBody.data.id);
-      expect(body.data.userId).toEqual(user.id);
-      expect(body.data.assignedById).toEqual(user.id);
-      expect(body.data.user.id).toEqual(user.id);
-      expect(body.data.assignedBy.id).toEqual(user.id);
-      expect(body.data.assignedAt).toBeDefined();
+      expect(body.data.id).toEqual(createBody.data.id);
+      expect(body.data.assigneeCount).toEqual(1);
+      expect(body.data.assignees).toHaveLength(1);
+      expect(body.data.assignees[0].id).toEqual(user.id);
+      expect(body.data.assignments).toHaveLength(1);
+      expect(body.data.assignments[0].userId).toEqual(user.id);
+      expect(body.data.assignments[0].assignedById).toEqual(user.id);
+      expect(body.data.assignments[0].assignedAt).toBeDefined();
     });
 
     it("should assign current user to task when explicitly specified", async () => {
@@ -496,7 +498,9 @@ describe("tasks API", () => {
 
       expect(res.status).toEqual(200);
       expect(body.ok).toEqual(true);
-      expect(body.data.userId).toEqual(user.id);
+      expect(body.data.assignees).toHaveLength(1);
+      expect(body.data.assignees[0].id).toEqual(user.id);
+      expect(body.data.assignments[0].userId).toEqual(user.id);
     });
 
     it("should prevent non-creator/non-admin from assigning task to other users", async () => {
@@ -557,10 +561,12 @@ describe("tasks API", () => {
 
       expect(res.status).toEqual(200);
       expect(body.ok).toEqual(true);
-      expect(body.data.userId).toEqual(user.id);
-      expect(body.data.assignedById).toEqual(taskCreator.id);
-      expect(body.data.user.id).toEqual(user.id);
-      expect(body.data.assignedBy.id).toEqual(taskCreator.id);
+      expect(body.data.assignees).toHaveLength(1);
+      expect(body.data.assignees[0].id).toEqual(user.id);
+      expect(body.data.assignments[0].userId).toEqual(user.id);
+      expect(body.data.assignments[0].assignedById).toEqual(taskCreator.id);
+      expect(body.data.assignments[0].user.id).toEqual(user.id);
+      expect(body.data.assignments[0].assignedBy.id).toEqual(taskCreator.id);
     });
 
     it("should allow admin to assign task to other users", async () => {
@@ -590,10 +596,12 @@ describe("tasks API", () => {
 
       expect(res.status).toEqual(200);
       expect(body.ok).toEqual(true);
-      expect(body.data.userId).toEqual(user.id);
-      expect(body.data.assignedById).toEqual(admin.id);
-      expect(body.data.user.id).toEqual(user.id);
-      expect(body.data.assignedBy.id).toEqual(admin.id);
+      expect(body.data.assignees).toHaveLength(1);
+      expect(body.data.assignees[0].id).toEqual(user.id);
+      expect(body.data.assignments[0].userId).toEqual(user.id);
+      expect(body.data.assignments[0].assignedById).toEqual(admin.id);
+      expect(body.data.assignments[0].user.id).toEqual(user.id);
+      expect(body.data.assignments[0].assignedBy.id).toEqual(admin.id);
     });
 
     it("should prevent assignment to user from different team", async () => {
@@ -972,6 +980,42 @@ describe("tasks API", () => {
 
       expect(res.status).toEqual(404);
       expect(body.error).toEqual("Task not found");
+    });
+
+    it("should reproduce assignment failure when findByPk fails", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Try to assign to self - this should succeed normally
+      const res = await server.post("/api/tasks.assign", {
+        body: {
+          token: user.getJwtToken(),
+          id: createBody.data.id,
+          userId: user.id, // Explicitly provide userId
+        },
+      });
+      const body = await res.json();
+
+      if (res.status === 400) {
+        // This test is meant to check if assignment works properly
+      }
+
+      // This test should pass, but let's see if we can trigger the failure
+      expect(res.status).toEqual(200);
+      expect(body.ok).toEqual(true);
+      expect(body.data.user).toBeDefined();
+      expect(body.data.assignedBy).toBeDefined();
+      expect(body.data.user.id).toEqual(user.id);
+      expect(body.data.assignedBy.id).toEqual(user.id);
     });
   });
 });

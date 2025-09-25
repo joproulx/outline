@@ -415,26 +415,86 @@ router.post("tasks.assign", auth(), async (ctx) => {
     );
 
     // Load the assignment with user data for response
-    const assignmentWithUser = await TaskAssignment.findByPk(assignment.id);
+    const assignmentWithUser = await TaskAssignment.findByPk(assignment.id, {
+      include: [
+        {
+          model: User,
+          as: "user",
+          paranoid: false,
+        },
+        {
+          model: User,
+          as: "assignedBy",
+          paranoid: false,
+        },
+      ],
+    });
+    if (!assignmentWithUser) {
+      throw new Error("Assignment not found");
+    }
+
+    if (!assignmentWithUser.user) {
+      throw new Error("Assignment user not found");
+    }
+
+    if (!assignmentWithUser.assignedBy) {
+      throw new Error("Assignment assignedBy not found");
+    }
+
+    // Reload the task with updated assignment data
+    const updatedTask = await TaskItem.findByPk(id, {
+      include: [
+        {
+          model: TaskAssignment,
+          as: "assignments",
+          include: [
+            { model: User, as: "user", paranoid: false },
+            { model: User, as: "assignedBy", paranoid: false },
+          ],
+        },
+      ],
+    });
+
+    if (!updatedTask) {
+      throw new Error("Task not found after assignment");
+    }
 
     ctx.body = {
       ok: true,
       data: {
-        id: assignmentWithUser.id,
-        taskId: assignmentWithUser.taskId,
-        userId: assignmentWithUser.userId,
-        assignedById: assignmentWithUser.assignedById,
-        assignedAt: assignmentWithUser.assignedAt?.toISOString(),
-        user: {
-          id: assignmentWithUser.user.id,
-          name: assignmentWithUser.user.name,
-          email: assignmentWithUser.user.email,
-        },
-        assignedBy: {
-          id: assignmentWithUser.assignedBy.id,
-          name: assignmentWithUser.assignedBy.name,
-          email: assignmentWithUser.assignedBy.email,
-        },
+        id: updatedTask.id,
+        title: updatedTask.title,
+        description: updatedTask.description,
+        priority: updatedTask.priority.toLowerCase(),
+        dueDate: updatedTask.deadline?.toISOString(),
+        tags: updatedTask.tags || [],
+        createdAt: updatedTask.createdAt?.toISOString(),
+        updatedAt: updatedTask.updatedAt?.toISOString(),
+        createdById: updatedTask.createdById,
+        assigneeCount: updatedTask.assigneeCount,
+        assignees:
+          updatedTask.assignees?.map((assignee) => ({
+            id: assignee.id,
+            name: assignee.name,
+            email: assignee.email,
+          })) || [],
+        assignments:
+          updatedTask.assignments?.map((assignment) => ({
+            id: assignment.id,
+            userId: assignment.userId,
+            assignedById: assignment.assignedById,
+            assignedAt: assignment.assignedAt?.toISOString(),
+            user: {
+              id: assignment.user.id,
+              name: assignment.user.name,
+              email: assignment.user.email,
+            },
+            assignedBy: {
+              id: assignment.assignedBy.id,
+              name: assignment.assignedBy.name,
+              email: assignment.assignedBy.email,
+            },
+          })) || [],
       },
     };
   } catch (error) {
