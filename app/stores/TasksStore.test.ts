@@ -407,7 +407,7 @@ describe("TasksStore", () => {
         mockClient.post.mockRejectedValueOnce(new Error("API Error"));
 
         await expect(tasksStore.assign(mockTask, "user-1")).rejects.toThrow(
-          "Failed to assign task"
+          "API Error"
         );
 
         expect(mockClient.post).toHaveBeenCalledWith("/tasks.assign", {
@@ -486,7 +486,7 @@ describe("TasksStore", () => {
         mockClient.post.mockRejectedValueOnce(new Error("API Error"));
 
         await expect(tasksStore.unassign(mockTask, "user-1")).rejects.toThrow(
-          "Failed to unassign task"
+          "API Error"
         );
 
         expect(mockClient.post).toHaveBeenCalledWith("/tasks.unassign", {

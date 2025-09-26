@@ -47,6 +47,7 @@ class ApiClient {
     this.shareId = shareId;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetch = async <T = any>(
     path: string,
     method: string,
@@ -180,6 +181,7 @@ class ApiClient {
     const error: {
       message?: string;
       error?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data?: Record<string, any>;
     } = {};
 
@@ -198,7 +200,9 @@ class ApiClient {
     }
 
     if (response.status === 400) {
-      throw new BadRequestError(error.message);
+      // Use the server's error message if available, otherwise fall back to generic message
+      const errorMessage = error.error || error.message || "Bad request";
+      throw new BadRequestError(errorMessage);
     }
 
     if (response.status === 402) {
@@ -244,12 +248,14 @@ class ApiClient {
     throw err;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get = <T = any>(
     path: string,
     data: JSONObject | undefined,
     options?: FetchOptions
   ) => this.fetch<T>(path, "GET", data, options);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   post = <T = any>(
     path: string,
     data?: JSONObject | FormData | undefined,

@@ -161,6 +161,16 @@ router.post("tasks.list", auth(), async (ctx) => {
     const tasks = await TaskItem.findAll({
       where,
       order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: TaskAssignment,
+          as: "assignments",
+          include: [
+            { model: User, as: "user", paranoid: false },
+            { model: User, as: "assignedBy", paranoid: false },
+          ],
+        },
+      ],
     });
 
     // Convert backend format to frontend format

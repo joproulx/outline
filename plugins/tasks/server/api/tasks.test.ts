@@ -215,6 +215,86 @@ describe("tasks API", () => {
       expect(res.status).toEqual(200);
       expect(body.data.length).toEqual(0);
     });
+
+    it("should include assignment data in task list", async () => {
+      const team = await buildTeam();
+      const user1 = await buildUser({ teamId: team.id });
+      const user2 = await buildUser({ teamId: team.id });
+
+      // Create a task
+      const createRes = await server.post("/api/tasks.create", {
+        body: {
+          token: user1.getJwtToken(),
+          title: "Test Task",
+        },
+      });
+      const createBody = await createRes.json();
+
+      // Assign user2 to the task
+      await server.post("/api/tasks.assign", {
+        body: {
+          token: user1.getJwtToken(),
+          id: createBody.data.id,
+          userId: user2.id,
+        },
+      });
+
+      // List tasks and verify assignment data is included
+      const listRes = await server.post("/api/tasks.list", {
+        body: {
+          token: user1.getJwtToken(),
+        },
+      });
+      const listBody = await listRes.json();
+
+      expect(listRes.status).toEqual(200);
+      expect(listBody.ok).toEqual(true);
+      expect(listBody.data.length).toEqual(1);
+
+      const task = listBody.data[0];
+      expect(task.id).toEqual(createBody.data.id);
+      expect(task.assigneeCount).toEqual(1);
+      expect(task.assignees).toHaveLength(1);
+      expect(task.assignees[0].id).toEqual(user2.id);
+      expect(task.assignees[0].name).toEqual(user2.name);
+      expect(task.assignees[0].email).toEqual(user2.email);
+      expect(task.assignments).toHaveLength(1);
+      expect(task.assignments[0].userId).toEqual(user2.id);
+      expect(task.assignments[0].assignedById).toEqual(user1.id);
+      expect(task.assignments[0].user.id).toEqual(user2.id);
+      expect(task.assignments[0].assignedBy.id).toEqual(user1.id);
+      expect(task.assignments[0].assignedAt).toBeDefined();
+    });
+
+    it("should show empty assignment data for unassigned tasks", async () => {
+      const team = await buildTeam();
+      const user = await buildUser({ teamId: team.id });
+
+      // Create an unassigned task
+      await server.post("/api/tasks.create", {
+        body: {
+          token: user.getJwtToken(),
+          title: "Unassigned Task",
+        },
+      });
+
+      // List tasks and verify no assignment data
+      const listRes = await server.post("/api/tasks.list", {
+        body: {
+          token: user.getJwtToken(),
+        },
+      });
+      const listBody = await listRes.json();
+
+      expect(listRes.status).toEqual(200);
+      expect(listBody.ok).toEqual(true);
+      expect(listBody.data.length).toEqual(1);
+
+      const task = listBody.data[0];
+      expect(task.assigneeCount).toEqual(0);
+      expect(task.assignees).toEqual([]);
+      expect(task.assignments).toEqual([]);
+    });
   });
 
   describe("tasks.update", () => {
@@ -1005,17 +1085,15 @@ describe("tasks API", () => {
       });
       const body = await res.json();
 
-      if (res.status === 400) {
-        // This test is meant to check if assignment works properly
-      }
-
-      // This test should pass, but let's see if we can trigger the failure
+      // Assignment should succeed and return task data with assignments
       expect(res.status).toEqual(200);
       expect(body.ok).toEqual(true);
-      expect(body.data.user).toBeDefined();
-      expect(body.data.assignedBy).toBeDefined();
-      expect(body.data.user.id).toEqual(user.id);
-      expect(body.data.assignedBy.id).toEqual(user.id);
+      expect(body.data.assignments).toBeDefined();
+      expect(body.data.assignments.length).toBeGreaterThan(0);
+      expect(body.data.assignments[0].user).toBeDefined();
+      expect(body.data.assignments[0].assignedBy).toBeDefined();
+      expect(body.data.assignments[0].user.id).toEqual(user.id);
+      expect(body.data.assignments[0].assignedBy.id).toEqual(user.id);
     });
   });
 });

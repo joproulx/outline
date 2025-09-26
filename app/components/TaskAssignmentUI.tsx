@@ -51,10 +51,19 @@ const TaskAssignmentUI = ({
   );
 
   // Check if current user is assigned to this task
-  const isAssignedToMe = React.useMemo(
-    () => task.assignees.some((assignee) => assignee.id === currentUser.id),
-    [task.assignees, currentUser.id]
-  );
+  const isAssignedToMe = React.useMemo(() => {
+    const result = task.assignees.some(
+      (assignee) => assignee.id === currentUser.id
+    );
+    Logger.info("store", "TaskAssignmentUI: checking if assigned to me", {
+      taskId: task.id,
+      currentUserId: currentUser.id,
+      assignees: task.assignees,
+      assigneeCount: task.assigneeCount,
+      isAssignedToMe: result,
+    });
+    return result;
+  }, [task.assignees, currentUser.id, task.id, task.assigneeCount]);
 
   const handleAssignToMe = React.useCallback(async () => {
     if (isAssignedToMe || isAssigning) {

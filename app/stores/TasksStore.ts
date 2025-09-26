@@ -231,6 +231,11 @@ export default class TasksStore extends Store<Task> {
   @action
   async assign(task: Task, userId: string): Promise<Task> {
     try {
+      Logger.info("store", "TasksStore.assign: calling API", {
+        taskId: task.id,
+        userId: userId,
+      });
+
       const res = await client.post("/tasks.assign", {
         id: task.id,
         userId: userId,
@@ -249,8 +254,32 @@ export default class TasksStore extends Store<Task> {
       }
 
       throw new Error("Failed to assign task - no valid data returned");
-    } catch (_error) {
-      throw new Error("Failed to assign task");
+    } catch (error: unknown) {
+      const err = error as any; // Cast to any for compatibility with existing error handling
+      Logger.error("Failed to assign task - detailed error", err, {
+        taskId: task.id,
+        userId: userId,
+        errorResponse: err.response?.data || err.response,
+        errorStatus: err.response?.status,
+        errorType: err.constructor.name,
+        errorMessage: err.message,
+        // Try to capture any additional error details
+        fullError: err,
+      });
+
+      // The ApiClient converts server responses to specific error types
+      // but may lose the detailed error message. Let's preserve it.
+      let errorMessage = "Failed to assign task";
+
+      if (err.message && err.message !== "Failed to assign task") {
+        errorMessage = err.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      throw new Error(errorMessage);
     }
   }
 
@@ -260,6 +289,11 @@ export default class TasksStore extends Store<Task> {
   @action
   async unassign(task: Task, userId: string): Promise<Task> {
     try {
+      Logger.info("store", "TasksStore.unassign: calling API", {
+        taskId: task.id,
+        userId: userId,
+      });
+
       const res = await client.post("/tasks.unassign", {
         id: task.id,
         userId: userId,
@@ -278,8 +312,19 @@ export default class TasksStore extends Store<Task> {
       }
 
       throw new Error("Failed to unassign task - no valid data returned");
-    } catch (_error) {
-      throw new Error("Failed to unassign task");
+    } catch (error: unknown) {
+      const err = error as any; // Cast to any for compatibility with existing error handling
+      Logger.error("Failed to unassign task - detailed error", err, {
+        taskId: task.id,
+        userId: userId,
+        errorResponse: err.response?.data || err.response,
+        errorStatus: err.response?.status,
+      });
+
+      // Re-throw with more specific error message if available
+      const errorMessage =
+        err.response?.data?.error || err.message || "Failed to unassign task";
+      throw new Error(errorMessage);
     }
   }
 

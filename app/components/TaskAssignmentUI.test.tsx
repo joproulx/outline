@@ -489,4 +489,150 @@ describe("TaskAssignmentUI", () => {
       expect(screen.queryByText("Assign to me")).toBeNull();
     });
   });
+
+  describe("Assignment Detection", () => {
+    it("correctly detects when current user is assigned", () => {
+      const mockTask = new Task(
+        {
+          id: "task-1",
+          title: "Test Task",
+          assigneeCount: 2,
+          assignees: [
+            {
+              id: "current-user-id",
+              name: "Current User",
+              email: "current@example.com",
+            },
+            {
+              id: "other-user",
+              name: "Other User",
+              email: "other@example.com",
+            },
+          ],
+          assignments: [
+            {
+              id: "assignment-1",
+              userId: "current-user-id",
+              assignedById: "admin-id",
+              assignedAt: "2025-01-01T00:00:00.000Z",
+              user: {
+                id: "current-user-id",
+                name: "Current User",
+                email: "current@example.com",
+              },
+              assignedBy: {
+                id: "admin-id",
+                name: "Admin User",
+                email: "admin@example.com",
+              },
+            },
+          ],
+        },
+        mockTasksStore as never
+      );
+
+      render(
+        <Provider auth={authStore} {...mockStores}>
+          <TaskAssignmentUI
+            task={mockTask}
+            compact={false}
+            showControls={true}
+            {...props}
+          />
+        </Provider>
+      );
+
+      // Should show "Unassign me" button instead of "Assign to me"
+      expect(screen.getByText("Unassign me")).toBeDefined();
+      expect(screen.queryByText("Assign to me")).toBeNull();
+    });
+
+    it("correctly detects when current user is not assigned", () => {
+      const mockTask = new Task(
+        {
+          id: "task-1",
+          title: "Test Task",
+          assigneeCount: 1,
+          assignees: [
+            {
+              id: "other-user",
+              name: "Other User",
+              email: "other@example.com",
+            },
+          ],
+          assignments: [
+            {
+              id: "assignment-1",
+              userId: "other-user",
+              assignedById: "admin-id",
+              assignedAt: "2025-01-01T00:00:00.000Z",
+              user: {
+                id: "other-user",
+                name: "Other User",
+                email: "other@example.com",
+              },
+              assignedBy: {
+                id: "admin-id",
+                name: "Admin User",
+                email: "admin@example.com",
+              },
+            },
+          ],
+        },
+        mockTasksStore as never
+      );
+
+      render(
+        <Provider auth={authStore} {...mockStores}>
+          <TaskAssignmentUI
+            task={mockTask}
+            compact={false}
+            showControls={true}
+            {...props}
+          />
+        </Provider>
+      );
+
+      // Should show "Assign to me" button since user is not assigned
+      expect(screen.getByText("Assign to me")).toBeDefined();
+      expect(screen.queryByText("Unassign me")).toBeNull();
+    });
+
+    it("prevents duplicate assignment when user is already assigned", async () => {
+      const mockTask = new Task(
+        {
+          id: "task-1",
+          title: "Test Task",
+          assigneeCount: 1,
+          assignees: [
+            {
+              id: "current-user-id",
+              name: "Current User",
+              email: "current@example.com",
+            },
+          ],
+          assignments: [],
+        },
+        mockTasksStore as never
+      );
+
+      render(
+        <Provider auth={authStore} {...mockStores}>
+          <TaskAssignmentUI
+            task={mockTask}
+            compact={false}
+            showControls={true}
+            {...props}
+          />
+        </Provider>
+      );
+
+      // Should show "Unassign me" and not call assign when clicked
+      const unassignButton = screen.getByText("Unassign me");
+      expect(unassignButton).toBeDefined();
+
+      // No assign button should be present
+      expect(screen.queryByText("Assign to me")).toBeNull();
+    });
+  });
 });
