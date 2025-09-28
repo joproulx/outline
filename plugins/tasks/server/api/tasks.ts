@@ -170,13 +170,13 @@ router.post("tasks.list", auth(), async (ctx) => {
               model: User,
               as: "user",
               paranoid: true,
-              attributes: ["id", "name", "email", "avatarUrl", "color"],
+              attributes: ["id", "name", "email", "avatarUrl"],
             },
             {
               model: User,
               as: "assignedBy",
               paranoid: true,
-              attributes: ["id", "name", "email", "avatarUrl", "color"],
+              attributes: ["id", "name", "email", "avatarUrl"],
             },
           ],
         },
@@ -201,7 +201,7 @@ router.post("tasks.list", auth(), async (ctx) => {
           name: assignee.name,
           email: assignee.email,
           avatarUrl: assignee.avatarUrl || null,
-          color: assignee.color || null,
+          color: assignee.color || null, // This is a getter method
         })) || [],
       assignments:
         task.assignments?.map((assignment) => ({
@@ -214,14 +214,14 @@ router.post("tasks.list", auth(), async (ctx) => {
             name: assignment.user.name,
             email: assignment.user.email,
             avatarUrl: assignment.user.avatarUrl || null,
-            color: assignment.user.color || null,
+            color: assignment.user.color || null, // This is a getter method
           },
           assignedBy: {
             id: assignment.assignedBy.id,
             name: assignment.assignedBy.name,
             email: assignment.assignedBy.email,
             avatarUrl: assignment.assignedBy.avatarUrl || null,
-            color: assignment.assignedBy.color || null,
+            color: assignment.assignedBy.color || null, // This is a getter method
           },
         })) || [],
     }));
