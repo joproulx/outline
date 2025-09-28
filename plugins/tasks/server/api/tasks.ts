@@ -166,8 +166,18 @@ router.post("tasks.list", auth(), async (ctx) => {
           model: TaskAssignment,
           as: "assignments",
           include: [
-            { model: User, as: "user", paranoid: false },
-            { model: User, as: "assignedBy", paranoid: false },
+            {
+              model: User,
+              as: "user",
+              paranoid: true,
+              attributes: ["id", "name", "email", "avatarUrl", "color"],
+            },
+            {
+              model: User,
+              as: "assignedBy",
+              paranoid: true,
+              attributes: ["id", "name", "email", "avatarUrl", "color"],
+            },
           ],
         },
       ],
@@ -190,6 +200,8 @@ router.post("tasks.list", auth(), async (ctx) => {
           id: assignee.id,
           name: assignee.name,
           email: assignee.email,
+          avatarUrl: assignee.avatarUrl || null,
+          color: assignee.color || null,
         })) || [],
       assignments:
         task.assignments?.map((assignment) => ({
@@ -201,11 +213,15 @@ router.post("tasks.list", auth(), async (ctx) => {
             id: assignment.user.id,
             name: assignment.user.name,
             email: assignment.user.email,
+            avatarUrl: assignment.user.avatarUrl || null,
+            color: assignment.user.color || null,
           },
           assignedBy: {
             id: assignment.assignedBy.id,
             name: assignment.assignedBy.name,
             email: assignment.assignedBy.email,
+            avatarUrl: assignment.assignedBy.avatarUrl || null,
+            color: assignment.assignedBy.color || null,
           },
         })) || [],
     }));
