@@ -1,5 +1,6 @@
 import { observer } from "mobx-react";
 import * as React from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { PlusIcon, UserIcon } from "outline-icons";
@@ -36,34 +37,43 @@ const TaskAssignmentUI = ({
   const currentUser = useCurrentUser();
   const [isAssigning, setIsAssigning] = React.useState(false);
 
+  // log the task
+  Logger.info("plugins", "Assigness:", task.assignees);
+
   // Convert TaskAssignee to User-like objects for Facepile
   const assigneeUsers = React.useMemo(
     () =>
       task.assignees.map((assignee: TaskAssignee) => ({
         id: assignee.id,
         name: assignee.name,
-        avatarUrl: null, // We don't have avatar URLs in TaskAssignee
+        avatarUrl: assignee.avatarUrl,
         color: null,
         initial: assignee.name.charAt(0).toUpperCase(),
         email: assignee.email,
-      })) as User[],
-    [task.assignees]
+      })) as unknown as User[],
+    [task.assignees, task, task.assignees.length]
   );
 
   // Check if current user is assigned to this task
-  const isAssignedToMe = React.useMemo(() => {
-    const result = task.assignees.some(
-      (assignee) => assignee.id === currentUser.id
-    );
-    Logger.info("store", "TaskAssignmentUI: checking if assigned to me", {
+  const isAssignedToMe = useMemo(() => {
+    const assigned = task.assignees?.some((assignee) => assignee.id === currentUser.id) ?? false;
+
+    // Enhanced debugging
+    Logger.debug("plugins", "TaskAssignmentUI.isAssignedToMe calculation", {
       taskId: task.id,
+      taskTitle: task.title,
       currentUserId: currentUser.id,
-      assignees: task.assignees,
-      assigneeCount: task.assigneeCount,
-      isAssignedToMe: result,
+      assigneesArray: task.assignees,
+      assigneesCount: task.assignees?.length || 0,
+      assigneesIds: task.assignees?.map(a => a.id) || [],
+      assignmentsArray: task.assignments,
+      assignmentsCount: task.assignments?.length || 0,
+      assignmentsUserIds: task.assignments?.map(a => a.userId) || [],
+      isAssigned: assigned,
     });
-    return result;
-  }, [task.assignees, currentUser.id, task.id, task.assigneeCount]);
+
+    return assigned;
+  }, [task, task.assignees, currentUser.id, task.assignees.length]);
 
   const handleAssignToMe = React.useCallback(async () => {
     if (isAssignedToMe || isAssigning) {
@@ -104,6 +114,7 @@ const TaskAssignmentUI = ({
   }, [isAssignedToMe, isAssigning, tasks, task, currentUser.id]);
 
   if (compact) {
+    Logger.info("plugins", "Compact: assignee count:" + task.assigneeCount);
     return (
       <CompactContainer>
         {task.assigneeCount > 0 ? (
@@ -129,7 +140,7 @@ const TaskAssignmentUI = ({
         {showControls && (
           <Controls>
             {isAssignedToMe ? (
-              <Tooltip tooltip={t("Remove yourself from task")} placement="top">
+              <Tooltip content={t("Remove yourself from task")} placement="top">
                 <Button
                   type="button"
                   size="small"
@@ -142,7 +153,7 @@ const TaskAssignmentUI = ({
                 </Button>
               </Tooltip>
             ) : (
-              <Tooltip tooltip={t("Assign yourself to task")} placement="top">
+              <Tooltip content={t("Assign yourself to task")} placement="top">
                 <Button
                   type="button"
                   size="small"
@@ -166,9 +177,8 @@ const TaskAssignmentUI = ({
               <Avatar
                 model={{
                   id: assignee.id,
-                  name: assignee.name,
                   avatarUrl: null,
-                  color: null,
+                  color: undefined,
                   initial: assignee.name.charAt(0).toUpperCase(),
                 }}
                 size={AvatarSize.Medium}
@@ -180,7 +190,7 @@ const TaskAssignmentUI = ({
                 </AssigneeEmail>
               </AssigneeInfo>
               {showControls && assignee.id === currentUser.id && (
-                <Tooltip tooltip={t("Remove yourself")} placement="top">
+                <Tooltip content={t("Remove yourself")} placement="top">
                   <RemoveButton
                     type="button"
                     size="small"

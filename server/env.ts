@@ -263,7 +263,7 @@ export class Environment {
    * Configure lowest severity level for server logs
    */
   @IsIn(["error", "warn", "info", "http", "verbose", "debug", "silly"])
-  public LOG_LEVEL = environment.LOG_LEVEL || "info";
+  public LOG_LEVEL = environment.LOG_LEVEL || "debug";
 
   /**
    * How many processes should be spawned. As a reasonable rule divide your

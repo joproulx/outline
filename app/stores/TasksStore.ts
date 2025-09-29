@@ -127,30 +127,41 @@ export default class TasksStore extends Store<Task> {
    */
   @action
   fetchPage = async (params?: FetchPageParams): Promise<Task[]> => {
+
+    if (this.isFetching) {
+      return [];
+    }
     this.isFetching = true;
 
     try {
       const res = await client.post("/tasks.list", params);
+
       const tasks = res.data || []; // Fixed: res.data is the array, not res.data.data
 
-      runInAction(() => {
-        if (Array.isArray(tasks)) {
-          this.addPolicies(res.policies);
-          tasks.forEach((task) => {
-            this.add(task);
-          });
-          this.isLoaded = true;
-        }
+      // Debug logging to see what data we're receiving
+      Logger.debug("store", "TasksStore.fetchPage - Raw response data", {
+        tasksLength: Array.isArray(tasks) ? tasks.length : 0,
+        firstTaskSample: Array.isArray(tasks) && tasks.length > 0 ? {
+          id: tasks[0].id,
+          title: tasks[0].title,
+          assignees: tasks[0].assignees,
+          assignments: tasks[0].assignments,
+          assigneeCount: tasks[0].assigneeCount,
+        } : null,
       });
 
-      return Array.isArray(tasks) ? tasks : [];
+      return runInAction(() => {
+        const models = res.data.task.map(this.add);
+        this.addPolicies(res.policies);
+        this.isLoaded = true;
+        return models;
+      });
+
     } catch (_error) {
       // Error already logged by the client
       return [];
     } finally {
-      runInAction(() => {
-        this.isFetching = false;
-      });
+      this.isFetching = false;
     }
   };
 

@@ -97,26 +97,28 @@ const TaskList = () => {
     // Apply search filter with debounced search
     if (debouncedSearchQuery.trim()) {
       const query = debouncedSearchQuery.trim().toLowerCase();
-      result = result.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query) ||
-          task.tags.some((tag) => tag.toLowerCase().includes(query))
-      );
+      result = result.filter((task) => {
+        const titleMatch = task.title.toLowerCase().includes(query);
+        const descMatch = task.description?.toLowerCase().includes(query) ?? false;
+        const tagMatch = task.tags.some((tag) => tag.toLowerCase().includes(query));
+        return titleMatch || descMatch || tagMatch;
+      });
     }
 
-    const sortedResult = result.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    // Defensive: sort only if result is not empty
+    const sortedResult = result.length > 1
+      ? [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      : result;
 
     return sortedResult;
   }, [
     activeFilter,
     debouncedSearchQuery,
-    tasks,
-    tasks.isLoaded,
-    tasks.data.size,
+    tasks.all,
+    tasks.assigned,
+    tasks.unassigned,
+    tasks.overdue,
+    tasks.dueToday,
     currentUser.id,
   ]);
 
@@ -338,7 +340,7 @@ const FiltersContainer = styled.div`
   align-items: center;
 `;
 
-const FilterButton = styled(Button)<{ $active: boolean }>`
+const FilterButton = styled(Button) <{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 6px;
@@ -349,9 +351,9 @@ const FilterButton = styled(Button)<{ $active: boolean }>`
 
   &:hover {
     background: ${(props) =>
-      props.$active ? s("accent") : s("secondaryBackground")};
+    props.$active ? s("accent") : s("secondaryBackground")};
     border-color: ${(props) =>
-      props.$active ? s("accent") : s("inputBorderFocused")};
+    props.$active ? s("accent") : s("inputBorderFocused")};
   }
 `;
 
